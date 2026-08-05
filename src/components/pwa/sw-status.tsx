@@ -1,4 +1,6 @@
 import { useRegisterSW } from 'virtual:pwa-register/react'
+import { match } from 'ts-pattern'
+
 import { Button } from '@/components/ui/button'
 
 /**
@@ -26,16 +28,24 @@ export function SwStatus() {
 
   return (
     <div className="bg-card fixed top-[calc(1rem+env(safe-area-inset-top))] right-4 z-50 flex items-center gap-3 rounded-lg border p-3 text-sm shadow-lg">
-      <span>{needRefresh ? '新しいバージョンがあります' : 'オフラインで利用できます'}</span>
-      {needRefresh ? (
-        <Button size="sm" onClick={() => void updateServiceWorker(true)}>
-          更新
-        </Button>
-      ) : (
-        <Button size="sm" variant="ghost" onClick={close}>
-          閉じる
-        </Button>
-      )}
+      <span>
+        {match(needRefresh)
+          .with(true, () => '新しいバージョンがあります')
+          .with(false, () => 'オフラインで利用できます')
+          .exhaustive()}
+      </span>
+      {match(needRefresh)
+        .with(true, () => (
+          <Button size="sm" onClick={() => void updateServiceWorker(true)}>
+            更新
+          </Button>
+        ))
+        .with(false, () => (
+          <Button size="sm" variant="ghost" onClick={close}>
+            閉じる
+          </Button>
+        ))
+        .exhaustive()}
     </div>
   )
 }

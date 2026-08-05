@@ -1,51 +1,37 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
+@import 'leaflet/dist/leaflet.css';
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-:root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-}
-
+/* このアプリはダークテーマ専用。index.html の <html class="dark"> と揃えるため
+   :root と .dark に同じ値を置き、ライトテーマへのフォールバックは持たない。 */
+:root,
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.269 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.371 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: oklch(0.985 0 0);
+  --radius: 0.625rem;
+  --background: #000000;
+  --foreground: #f7ffe8;
+  --card: #111111;
+  --card-foreground: #f7ffe8;
+  --popover: #16161a;
+  --popover-foreground: #f7ffe8;
+  --primary: #d9ff4d;
+  --primary-foreground: #111111;
+  --secondary: #1c1c1e;
+  --secondary-foreground: #f7ffe8;
+  --muted: #1c1c1e;
+  --muted-foreground: #b7c7a5;
+  --accent: #26262a;
+  --accent-foreground: #f7ffe8;
+  --destructive: #ff5449;
+  --destructive-foreground: #ffffff;
+  --success: #4ade80;
+  --success-foreground: #06240f;
+  --warning: #ffb400;
+  --warning-foreground: #241a00;
   --border: oklch(1 0 0 / 12%);
   --input: oklch(1 0 0 / 18%);
-  --ring: oklch(0.556 0 0);
+  --ring: #d9ff4d;
 }
 
 @theme inline {
@@ -69,6 +55,10 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -95,5 +85,35 @@
     /* standalone 表示でのテキスト選択・長押しメニューを抑制 */
     -webkit-tap-highlight-color: transparent;
     overscroll-behavior-y: none;
+  }
+}
+
+@layer components {
+
+  /* Leaflet はダークテーマ用のスタイルを持たないため、必要な部分だけ上書きする */
+  .leaflet-container {
+    background: #1c1c1e;
+    font: inherit;
+  }
+
+  .leaflet-control-attribution {
+    background: rgba(0, 0, 0, 0.6) !important;
+    color: var(--muted-foreground);
+    font-size: 10px;
+  }
+
+  .leaflet-control-attribution a {
+    color: var(--primary);
+  }
+
+  .leaflet-bar a {
+    background: #16161a;
+    color: #f7ffe8;
+    border-bottom-color: rgba(255, 255, 255, 0.12);
+  }
+
+  .leaflet-bar a:hover {
+    background: #26262a;
+    color: #f7ffe8;
   }
 }
