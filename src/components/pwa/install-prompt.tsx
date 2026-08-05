@@ -26,14 +26,14 @@ export function InstallPrompt() {
             追加後はデータが引き継がれないため、設定を作る前の追加をおすすめします。
           </p>
 
-          {canPrompt ? (
+          {canPrompt && (
             <Button size="sm" onClick={() => void promptInstall()}>
               <Download />
               インストール
             </Button>
-          ) : null}
+          )}
 
-          {needsManualInstructions ? (
+          {needsManualInstructions && (
             <ol className="text-muted-foreground space-y-1 text-xs">
               <li className="flex items-center gap-1.5">
                 <Share className="size-3.5 shrink-0" aria-hidden />
@@ -44,7 +44,7 @@ export function InstallPrompt() {
                 <span>2.「ホーム画面に追加」を選択</span>
               </li>
             </ol>
-          ) : null}
+          )}
         </div>
 
         <Button
