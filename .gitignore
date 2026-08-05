@@ -4,6 +4,9 @@ dist-ssr
 dev-dist
 *.local
 
+# TanStack Router プラグインの作業ディレクトリ（生成物）
+.tanstack
+
 .DS_Store
 .vscode/*
 !.vscode/extensions.json
@@ -20,3 +23,8 @@ yarn-error.log*
 pnpm-debug.log*
 logs
 *.log
+
+# 手元だけで持つ作業メモ（公開リポジトリに出さない）
+DECISION.md
+TODO.md
+CLAUDE.md
