@@ -17,6 +17,11 @@ export class BrokerNotConnectedError extends Data.TaggedError('BrokerNotConnecte
   readonly operation: string
 }> {}
 
+/** ブローカーに接続できなかった。未接続（送れない）ではなく接続の試行そのものの失敗 */
+export class BrokerUnreachableError extends Data.TaggedError('BrokerUnreachableError')<{
+  readonly reason: 'network' | 'auth'
+}> {}
+
 /** エッジデバイスがオフライン。ブローカーには繋がっているが応答が期待できない */
 export class EdgeOfflineError extends Data.TaggedError('EdgeOfflineError')<{
   readonly operation: string
@@ -52,6 +57,7 @@ export class SensorPermissionError extends Data.TaggedError('SensorPermissionErr
 /** アプリが投げうる失敗の総和 */
 export type AppError =
   | BrokerNotConnectedError
+  | BrokerUnreachableError
   | EdgeOfflineError
   | EdgeTimeoutError
   | RingingLockedError
@@ -68,6 +74,11 @@ export const errorMessage = Match.type<AppError>().pipe(
   Match.tag(
     'BrokerNotConnectedError',
     (e) => `${e.operation}できませんでした。ブローカーに接続してから再度お試しください。`,
+  ),
+  Match.tag('BrokerUnreachableError', (e) =>
+    e.reason === 'auth'
+      ? 'ブローカーに接続できませんでした。ユーザー名とパスワードを確認してください。'
+      : 'ブローカーに接続できませんでした。接続先と電波状況を確認してください。',
   ),
   Match.tag(
     'EdgeOfflineError',
