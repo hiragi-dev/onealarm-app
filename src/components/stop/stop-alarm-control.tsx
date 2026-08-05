@@ -1,16 +1,16 @@
 import { match, P } from 'ts-pattern'
-import { BellOff, Footprints, MapPin } from 'lucide-react'
+import { BellOff, MapPin } from 'lucide-react'
 
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Spinner } from '@/components/ui/spinner'
+import { WalkStatus } from '@/components/stop/walk-status'
 import { useDemo } from '@/contexts/demo-context'
 import { useAppReadiness } from '@/hooks/use-app-readiness'
 import { useRunEffect } from '@/lib/effect-react'
 import { blockReasonLabel } from '@/lib/app-state'
 import { distanceMeters, formatDistance } from '@/lib/geo'
-import { cn } from '@/lib/utils'
 
 /**
  * 「停止」タブの「アラームを止める」。アラームごとに設定された停止方法（位置情報）への
@@ -22,7 +22,6 @@ import { cn } from '@/lib/utils'
  */
 export function StopAlarmControl() {
   const {
-    isWalking,
     alarms,
     ringingStatus,
     stopMethods,
@@ -70,31 +69,8 @@ export function StopAlarmControl() {
           </Alert>
         )}
 
-        {/* 歩行検知状況を一目でわかるように大きく表示 */}
-        <Card
-          className={cn(
-            'transition-colors',
-            match(isWalking)
-              .with(true, () => 'border-success/40 bg-success/15')
-              .with(false, () => 'bg-accent/40')
-              .exhaustive(),
-          )}
-        >
-          <CardContent className="flex items-center gap-4">
-            <Footprints className={cn('size-11 shrink-0', isWalking && 'text-success')} />
-            <div className="min-w-0">
-              <p className="text-2xl font-semibold">
-                {match(isWalking)
-                  .with(true, () => '歩行を検知中')
-                  .with(false, () => '静止中')
-                  .exhaustive()}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                歩行中は自動的にアラームを一時停止します
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        {/* 歩行検知状況。鳴動中に一番大きく出す */}
+        <WalkStatus />
 
         {stopMethod && (
           <Card>
