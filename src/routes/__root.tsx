@@ -1,11 +1,11 @@
 import { createRootRoute, Link, Outlet } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
 
-import { RingingBanner } from '@/components/common/ringing-banner'
 import { BottomNav } from '@/components/layout/bottom-nav'
 import { InstallPrompt } from '@/components/pwa/install-prompt'
 import { SwStatus } from '@/components/pwa/sw-status'
 import { ArrivalStopBridge } from '@/components/stop/arrival-stop-bridge'
+import { RingingTakeover } from '@/components/stop/ringing-takeover'
 import { DemoProvider } from '@/contexts/demo-provider'
 import { NotificationProvider } from '@/contexts/notification-provider'
 
@@ -34,7 +34,8 @@ function RootLayout() {
       <DemoProvider>
         {/* 画面を持たない常駐処理: 停止地点への到達を監視して自動停止する */}
         <ArrivalStopBridge />
-        <RingingBanner />
+        {/* 鳴動中だけアプリ全体を覆う停止画面 */}
+        <RingingTakeover />
 
         <div className="flex h-full flex-col overflow-hidden">
           <main className="min-h-0 flex-1 overflow-hidden">

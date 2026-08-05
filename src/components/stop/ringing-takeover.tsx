@@ -1,5 +1,5 @@
 import { match, P } from 'ts-pattern'
-import { BellOff, MapPin } from 'lucide-react'
+import { BellRing, MapPin } from 'lucide-react'
 
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -13,14 +13,18 @@ import { blockReasonLabel } from '@/lib/app-state'
 import { distanceMeters, formatDistance } from '@/lib/geo'
 
 /**
- * 「停止」タブの「アラームを止める」。アラームごとに設定された停止方法（位置情報）への
- * 到達状況を表示する。実際の送信・到達判定は ArrivalStopBridge が担う。
+ * 鳴動中だけ画面全体（下部ナビも含む）を覆う停止画面。
+ *
+ * 「アラームを止める」操作は実際に鳴っているときにしか使わないため、
+ * 平常時はどこにも置かず、鳴り始めた瞬間にアプリ全体をこの画面で覆う。
+ * 鳴っている＝最優先という状況なので、他タブへ逃げられる余地を残さず、
+ * 到達して自動停止するまでこの画面だけを見せる。
  *
  * このアプリは「設定した停止地点に到達するまで確実に止められない」ことを意図しているため、
  * 手動で止めるボタンなどのフェイルセーフはここに置かず、状況表示のみを行う。
  * 複数アラームが同時に鳴動している場合は先頭の1件だけを表示する（簡易表示）。
  */
-export function StopAlarmControl() {
+export function RingingTakeover() {
   const {
     alarms,
     ringingStatus,
@@ -39,6 +43,9 @@ export function StopAlarmControl() {
 
   const ringingIds = ringingStatus?.ringingIds ?? []
   const isRinging = ringingIds.length > 0
+
+  // 鳴っていなければ何も描かない。平常時はこの画面自体が存在しない
+  if (!isRinging) return null
 
   // 鳴動中の先頭1件と、それに割り当てられた停止方法をたどる。
   // どちらも「無い」ことがふつうに起きるので、段階ごとに undefined を潰しておく
@@ -59,8 +66,14 @@ export function StopAlarmControl() {
     .otherwise(() => false)
 
   return (
-    <div className="relative h-full">
-      <div className="space-y-5">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(10,10,12,0.97)] backdrop-blur-xl animate-in fade-in-0">
+      <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-6 pt-10 pb-10">
+        {/* 鳴動中であることの見出し */}
+        <div className="flex items-center gap-2 text-warning">
+          <BellRing className="size-5 animate-pulse" />
+          <span className="text-sm font-bold tracking-wide">アラームが鳴っています</span>
+        </div>
+
         {alarmManagement.kind === 'blocked' && (
           <Alert variant="warning">
             <AlertDescription>
@@ -101,7 +114,7 @@ export function StopAlarmControl() {
           </Card>
         )}
 
-        {isRinging && !stopMethod && (
+        {!stopMethod && (
           <Alert variant="warning">
             <AlertDescription>
               このアラームには位置情報の停止方法が設定されていないため、自動的に停止できません。
@@ -112,7 +125,7 @@ export function StopAlarmControl() {
 
         {/* 実際に停止地点まで移動せずに到達検知フローを試すためのデバッグ操作。
             疑似現在地は ArrivalStopBridge が停止を確認でき次第、自動的に解除する。 */}
-        {import.meta.env.DEV && isRinging && (
+        {import.meta.env.DEV && (
           <Card className="border-dashed border-warning/50">
             <CardContent className="space-y-3">
               <p className="text-xs font-bold text-warning">開発用（本番ビルドには含まれません）</p>
@@ -138,29 +151,6 @@ export function StopAlarmControl() {
           </Card>
         )}
       </div>
-
-      {/* アラームが鳴っていない場合のオーバーレイ */}
-      {!isRinging && (
-        <div className="absolute -inset-4 z-10 flex items-center justify-center rounded-3xl bg-black/55 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-sm rounded-3xl border border-white/10 bg-[rgba(28,28,30,0.85)] px-6 py-10 text-center shadow-2xl backdrop-blur-xl">
-            <div className="mb-5 inline-flex rounded-full bg-white/7 p-5 text-white/40">
-              <BellOff className="size-10" />
-            </div>
-            <h2 className="mb-2 text-lg font-bold text-white/85">現在アラームは鳴っていません</h2>
-            <p className="text-sm leading-relaxed text-muted-foreground">
-              アラームが鳴り始めると、
-              <br />
-              ここで停止操作ができます。
-            </p>
-            {ringingStatus === null && (
-              <div className="mt-5 flex items-center justify-center gap-2 text-xs text-muted-foreground/60">
-                <Spinner className="size-3" />
-                エッジデバイスから鳴動状況を取得しています…
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   )
 }
