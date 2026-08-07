@@ -19,7 +19,9 @@ function Settings() {
 
       <ConnectionSettings />
 
-      <DemoPanel />
+      {/* 本来は外から起きる状態を切り替える操作なので、本番ビルドには残さない。
+          載せ替え後は実機へコマンドを送る口になり、鳴動を止める手段を増やしてしまう。 */}
+      {import.meta.env.DEV && <DemoPanel />}
     </div>
   )
 }

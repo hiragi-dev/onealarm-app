@@ -161,7 +161,10 @@ export function AddAlarmWizard({
             disabled={saving}
             onClick={() => (step === 0 ? handleClose() : goBack())}
           >
-            {step === 0 ? <X className="size-4" /> : <ArrowLeft className="size-4" />}
+            {match(step === 0)
+              .with(true, () => <X className="size-4" />)
+              .with(false, () => <ArrowLeft className="size-4" />)
+              .exhaustive()}
           </Button>
           <div className="flex flex-1 gap-1">
             {Array.from({ length: STEP_COUNT }).map((_, i) => (
@@ -339,15 +342,19 @@ export function AddAlarmWizard({
           >
             戻る
           </Button>
-          {step < STEP_COUNT - 1 ? (
-            <Button className="flex-1" disabled={!canProceed || saving} onClick={goNext}>
-              次へ
-            </Button>
-          ) : (
-            <Button className="flex-1" disabled={saving} onClick={() => void handleSave()}>
-              この内容で保存する
-            </Button>
-          )}
+          {/* 最終ステップだけ「保存」に変わる。押した先が別物なので同じボタンを使い回さない */}
+          {match(step < STEP_COUNT - 1)
+            .with(true, () => (
+              <Button className="flex-1" disabled={!canProceed || saving} onClick={goNext}>
+                次へ
+              </Button>
+            ))
+            .with(false, () => (
+              <Button className="flex-1" disabled={saving} onClick={() => void handleSave()}>
+                この内容で保存する
+              </Button>
+            ))
+            .exhaustive()}
         </div>
         </div>
       </DialogContent>

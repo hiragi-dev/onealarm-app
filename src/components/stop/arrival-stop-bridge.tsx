@@ -30,28 +30,39 @@ export function ArrivalStopBridge() {
   const sentForRef = React.useRef<string | null>(null)
 
   const ringingIds = ringingStatus?.ringingIds ?? []
-  const ringingId = ringingIds[0] ?? null
   const effectivePosition = simulatedPosition ?? currentPosition
 
-  const ringingAlarm = ringingId ? (alarms.find((a) => a.id === ringingId) ?? null) : null
-  const stopMethod = ringingAlarm?.stopMethodId
-    ? (stopMethods.find((m) => m.id === ringingAlarm.stopMethodId) ?? null)
-    : null
+  /**
+   * 鳴動中の全アラームを見て、どれか1つでも停止地点に到達していれば送る。
+   *
+   * 先頭1件だけを見ると、そのアラームに停止方法が未設定だった場合に
+   * 2件目以降の到達を永久に検知できず、歩いても止まらなくなる。
+   * stop コマンドはどのアラームを止めるか指定できない仕様なので、
+   * 1件でも到達していれば送ってよい。
+   */
+  const arrivedId =
+    effectivePosition == null
+      ? null
+      : (ringingIds.find((id) => {
+          const alarm = alarms.find((a) => a.id === id)
+          if (!alarm?.stopMethodId) return false
+          const method = stopMethods.find((m) => m.id === alarm.stopMethodId)
+          if (!method) return false
+          return distanceMeters(effectivePosition, method) <= method.radiusMeters
+        }) ?? null)
 
-  const arrived =
-    stopMethod != null &&
-    effectivePosition != null &&
-    distanceMeters(effectivePosition, stopMethod) <= stopMethod.radiusMeters
+  // 鳴動中のアラームの組。これが変わったら別の鳴動として扱う
+  const ringingKey = ringingIds.join(',')
 
   // 鳴動が終わったら次の鳴動に備えて送信記録を戻す
   React.useEffect(() => {
-    if (ringingId == null) sentForRef.current = null
-  }, [ringingId])
+    if (ringingKey === '') sentForRef.current = null
+  }, [ringingKey])
 
   React.useEffect(() => {
-    if (!arrived || ringingId == null) return
-    if (sentForRef.current === ringingId) return
-    sentForRef.current = ringingId
+    if (arrivedId == null) return
+    if (sentForRef.current === ringingKey) return
+    sentForRef.current = ringingKey
 
     void (async () => {
       const result = await run(sendStopCommand)
@@ -64,7 +75,7 @@ export function ArrivalStopBridge() {
         sentForRef.current = null
       }
     })()
-  }, [arrived, ringingId, run, sendStopCommand, notify, setSimulatedPosition])
+  }, [arrivedId, ringingKey, run, sendStopCommand, notify, setSimulatedPosition])
 
   return null
 }
