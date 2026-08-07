@@ -24,3 +24,12 @@ export type StopMethodInput = {
 export const DEFAULT_STOP_METHOD_RADIUS_METERS = 20
 export const MIN_STOP_METHOD_RADIUS_METERS = 5
 export const MAX_STOP_METHOD_RADIUS_METERS = 200
+
+/**
+ * 停止方法が1つも無いと、新しいアラームに割り当てる停止条件を選べない
+ * （アラームごとに停止方法は必須・1つ）。一覧の＋ボタンをここで止め、
+ * ウィザードを開いた後に手詰まりで気づく、という体験を避ける。
+ */
+export function canCreateAlarm(stopMethods: readonly StopMethod[]): boolean {
+  return stopMethods.length > 0
+}

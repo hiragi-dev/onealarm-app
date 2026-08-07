@@ -1,52 +1,22 @@
 import * as React from 'react'
-import { Effect, Option } from 'effect'
 import { match, P } from 'ts-pattern'
-import { AlarmClockOff, CloudOff, Plus, Trash2 } from 'lucide-react'
+import { AlarmClockOff, CloudOff, Plus } from 'lucide-react'
 
-import { InfoPopover } from '@/components/common/info-popover'
+import { AddAlarmWizard } from '@/components/alarm/add-alarm-wizard'
+import { EditAlarmPage } from '@/components/alarm/edit-alarm-page'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Spinner } from '@/components/ui/spinner'
 import { Switch } from '@/components/ui/switch'
 import { useDemo } from '@/contexts/demo-context'
-import { useNotify } from '@/contexts/notification-context'
 import { useAppReadiness } from '@/hooks/use-app-readiness'
-import { useRunEffect, useRunEffectState } from '@/lib/effect-react'
-import {
-  ALL_DAYS,
-  DAY_LABELS,
-  defaultTimeValue,
-  formatAlarmTime,
-  formatDaysOfWeek,
-  type Alarm,
-  type DayOfWeek,
-} from '@/lib/alarm'
+import { useRunEffect } from '@/lib/effect-react'
+import { formatAlarmTime, formatDaysOfWeek, type Alarm } from '@/lib/alarm'
 import { blockReasonLabel, type BlockReason, type BrokerConnection } from '@/lib/app-state'
-import type { StopMethod } from '@/lib/stop-method'
-import { validateAlarmForm } from '@/lib/validation'
+import { canCreateAlarm, type StopMethod } from '@/lib/stop-method'
 import { cn } from '@/lib/utils'
-
-type DialogMode = { kind: 'add' } | { kind: 'edit'; alarm: Alarm }
-type SavingOp = 'add' | 'edit' | 'delete'
 
 /**
  * 一覧の表示状態。「読み込み中」「空」「一覧あり」の3通りを暗黙の条件分岐ではなく
@@ -76,12 +46,17 @@ function AlarmListSkeleton() {
   )
 }
 
-function AlarmListEmpty() {
+function AlarmListEmpty({ canAdd }: { canAdd: boolean }) {
   return (
     <div className="mt-20 flex flex-col items-center gap-2">
       <AlarmClockOff className="size-11 text-muted-foreground/50" />
       <p className="text-muted-foreground">アラームはまだありません</p>
-      <p className="text-xs text-muted-foreground/60">右上の＋から追加できます</p>
+      <p className="text-xs text-muted-foreground/60">
+        {match(canAdd)
+          .with(true, () => '右上の＋から追加できます')
+          .with(false, () => '先に「停止」タブで停止方法を登録してください')
+          .exhaustive()}
+      </p>
     </div>
   )
 }
@@ -208,35 +183,25 @@ function ConnectionOverlay({
 }
 
 /**
- * 「アラーム」タブ。一覧の表示と、追加/編集/削除ダイアログを持つ。
+ * 「アラーム」タブ。一覧の表示と、新規作成（ステップウィザード）/
+ * 編集（フルページ）を持つ。
  *
  * 「未接続」「鳴動中」「エッジが応答しない」といった失敗はすべて demo-provider が
  * Effect のエラーとして返すため、ここでは条件分岐や応答待ちのタイマーを持たず、
- * 実行して成功したときだけダイアログを閉じる。失敗の文言と通知は useRunEffect が扱う。
+ * 実行して成功したときだけ画面を閉じる。失敗の文言と通知は各画面側の
+ * useRunEffect が扱う。
  */
 export function AlarmControl() {
-  const { alarms, alarmsUpdatedAt, ringingStatus, addAlarm, editAlarm, deleteAlarm, stopMethods } =
-    useDemo()
+  const { alarms, alarmsUpdatedAt, ringingStatus, editAlarm, stopMethods } = useDemo()
   const { alarmManagement, broker } = useAppReadiness()
-  const notify = useNotify()
-  const { run: runSave, pending: saving } = useRunEffectState()
   const run = useRunEffect()
 
   const ready = alarmManagement.kind === 'ready'
   const ringingIds = ringingStatus?.ringingIds ?? []
+  const canAdd = canCreateAlarm(stopMethods)
 
-  const [dialogMode, setDialogMode] = React.useState<DialogMode | null>(null)
-  const [savingOp, setSavingOp] = React.useState<SavingOp | null>(null)
-  const [timeInput, setTimeInput] = React.useState(defaultTimeValue())
-  const [selectedDays, setSelectedDays] = React.useState<DayOfWeek[]>([
-    'Mon',
-    'Tue',
-    'Wed',
-    'Thu',
-    'Fri',
-  ])
-  const [selectedStopMethodId, setSelectedStopMethodId] = React.useState('')
-  const [isNfcEnabled, setIsNfcEnabled] = React.useState(false)
+  const [addOpen, setAddOpen] = React.useState(false)
+  const [editingAlarm, setEditingAlarm] = React.useState<Alarm | null>(null)
 
   // 有効/無効トグルの応答待ち。トグルはダイアログを介さないため、
   // 対象行のスイッチをスピナーに置き換えて応答待ちを行単位で伝える
@@ -246,87 +211,6 @@ export function AlarmControl() {
     .with({ alarmsUpdatedAt: null }, (): ListState => ({ kind: 'loading' }))
     .with({ alarms: [] }, (): ListState => ({ kind: 'empty' }))
     .otherwise(({ alarms }): ListState => ({ kind: 'loaded', alarms }))
-
-  const openAddDialog = () => {
-    setTimeInput(defaultTimeValue())
-    setSelectedDays(['Mon', 'Tue', 'Wed', 'Thu', 'Fri'])
-    setSelectedStopMethodId('')
-    setIsNfcEnabled(false)
-    setDialogMode({ kind: 'add' })
-  }
-
-  const openEditDialog = (alarm: Alarm) => {
-    setTimeInput(alarm.time)
-    setSelectedDays(alarm.daysOfWeek)
-    setSelectedStopMethodId(alarm.stopMethodId ?? '')
-    setIsNfcEnabled(alarm.isNfcEnabled)
-    setDialogMode({ kind: 'edit', alarm })
-  }
-
-  const toggleDay = (day: DayOfWeek) => {
-    setSelectedDays((prev) =>
-      match(prev.includes(day))
-        .with(true, () => prev.filter((d) => d !== day))
-        .with(false, () => [...prev, day])
-        .exhaustive(),
-    )
-  }
-
-  const handleSave = async () => {
-    if (!dialogMode) return
-    const mode = dialogMode
-
-    // 入力の検証と送信を1本の Effect につなぐ。検証で落ちれば送信は実行されず、
-    // どちらの失敗も同じ経路（通知）で利用者に伝わる
-    const effect = validateAlarmForm({
-      time: timeInput,
-      daysOfWeek: selectedDays,
-      stopMethodId: selectedStopMethodId,
-      isNfcEnabled,
-    }).pipe(
-      Effect.flatMap((form) => {
-        const input = {
-          time: form.time,
-          daysOfWeek: [...form.daysOfWeek],
-          stopMethodId: form.stopMethodId,
-          isNfcEnabled: form.isNfcEnabled,
-        }
-        return match(mode)
-          .with({ kind: 'add' }, () => addAlarm({ ...input, isEnabled: true }))
-          .with({ kind: 'edit' }, ({ alarm }) =>
-            editAlarm(alarm.id, { ...input, isEnabled: alarm.isEnabled }),
-          )
-          .exhaustive()
-      }),
-    )
-
-    setSavingOp(mode.kind)
-    const result = await runSave(effect)
-    setSavingOp(null)
-
-    if (Option.isSome(result)) {
-      setDialogMode(null)
-      notify(
-        'success',
-        match(mode.kind)
-          .with('add', () => 'アラームを追加しました')
-          .with('edit', () => 'アラームを変更しました')
-          .exhaustive(),
-      )
-    }
-  }
-
-  const handleDelete = async () => {
-    if (dialogMode?.kind !== 'edit') return
-    setSavingOp('delete')
-    const result = await runSave(deleteAlarm(dialogMode.alarm.id))
-    setSavingOp(null)
-
-    if (Option.isSome(result)) {
-      setDialogMode(null)
-      notify('success', 'アラームを削除しました')
-    }
-  }
 
   const handleToggle = async (alarm: Alarm) => {
     setPendingToggles((prev) => new Set(prev).add(alarm.id))
@@ -346,10 +230,6 @@ export function AlarmControl() {
     })
   }
 
-  const isEdit = dialogMode?.kind === 'edit'
-  const isEditingRingingAlarm = isEdit && ringingIds.includes(dialogMode.alarm.id)
-  const inputsDisabled = saving || isEditingRingingAlarm
-
   return (
     <div className="relative flex h-full flex-col">
       <div className="flex items-center justify-between pb-2">
@@ -357,9 +237,14 @@ export function AlarmControl() {
         <Button
           variant="ghost"
           size="icon-lg"
-          onClick={openAddDialog}
-          disabled={!ready}
+          onClick={() => setAddOpen(true)}
+          disabled={!ready || !canAdd}
           aria-label="アラームを追加"
+          title={
+            match({ ready, canAdd })
+              .with({ ready: true, canAdd: false }, () => '先に「停止」タブで停止方法を登録してください')
+              .otherwise(() => undefined)
+          }
           className="text-primary"
         >
           <Plus className="size-6" />
@@ -371,7 +256,7 @@ export function AlarmControl() {
       <div className="min-h-0 flex-1 overflow-y-auto pb-4">
         {match(listState)
           .with({ kind: 'loading' }, () => <AlarmListSkeleton />)
-          .with({ kind: 'empty' }, () => <AlarmListEmpty />)
+          .with({ kind: 'empty' }, () => <AlarmListEmpty canAdd={canAdd} />)
           .with({ kind: 'loaded' }, ({ alarms }) => (
             <ul>
               {alarms.map((alarm, index) => (
@@ -382,7 +267,7 @@ export function AlarmControl() {
                     ready={ready}
                     ringing={ringingIds.includes(alarm.id)}
                     pending={pendingToggles.has(alarm.id)}
-                    onEdit={() => openEditDialog(alarm)}
+                    onEdit={() => setEditingAlarm(alarm)}
                     onToggle={() => void handleToggle(alarm)}
                   />
                   {index < alarms.length - 1 && <Separator />}
@@ -393,153 +278,16 @@ export function AlarmControl() {
           .exhaustive()}
       </div>
 
-      {/* 追加 / 編集ダイアログ */}
-      <Dialog
-        open={dialogMode !== null}
-        onOpenChange={(open) => !open && !saving && setDialogMode(null)}
-      >
-        <DialogContent showCloseButton={false} className="max-h-[90dvh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {match(isEdit)
-                .with(true, () => 'アラームを編集')
-                .with(false, () => 'アラームを追加')
-                .exhaustive()}
-            </DialogTitle>
-          </DialogHeader>
+      {/* 新規作成: ステップウィザード */}
+      <AddAlarmWizard open={addOpen} onOpenChange={setAddOpen} stopMethods={stopMethods} />
 
-          {isEditingRingingAlarm && (
-            <Alert variant="info">
-              <AlertDescription>
-                このアラームは鳴動中のため変更・削除できません。停止してから操作してください。
-              </AlertDescription>
-            </Alert>
-          )}
-
-          <Input
-            type="time"
-            value={timeInput}
-            onChange={(e) => setTimeInput(e.target.value)}
-            disabled={inputsDisabled}
-            aria-label="時刻"
-            className="h-auto border-0 bg-transparent py-2 text-center text-4xl font-extralight tracking-wider tabular-nums focus-visible:ring-0 md:text-4xl"
-          />
-
-          <fieldset disabled={inputsDisabled} className="disabled:opacity-50">
-            <legend className="mb-2 text-[0.7rem] tracking-[0.08em] text-muted-foreground uppercase">
-              繰り返す曜日
-            </legend>
-            <div className="flex w-full gap-1.5">
-              {ALL_DAYS.map((day) => {
-                const selected = selectedDays.includes(day)
-                return (
-                  <button
-                    key={day}
-                    type="button"
-                    onClick={() => toggleDay(day)}
-                    aria-pressed={selected}
-                    className={cn(
-                      'aspect-square flex-1 rounded-full border text-sm font-bold transition-transform',
-                      match(selected)
-                        .with(true, () => 'scale-105 border-primary bg-primary text-primary-foreground')
-                        .with(false, () => 'border-white/15 text-muted-foreground hover:bg-white/8')
-                        .exhaustive(),
-                    )}
-                  >
-                    {DAY_LABELS[day]}
-                  </button>
-                )
-              })}
-            </div>
-          </fieldset>
-
-          <fieldset disabled={inputsDisabled} className="disabled:opacity-50">
-            <legend className="mb-2 flex items-center gap-1 text-[0.7rem] tracking-[0.08em] text-muted-foreground uppercase">
-              停止方法（必須）
-              <InfoPopover>
-                このアラームをどうやって止めるかを1つ選びます。鳴動中は、ここで選んだ地点まで
-                移動しない限りアラームは止まりません。
-              </InfoPopover>
-            </legend>
-            {match(stopMethods)
-              .with([], () => (
-                <Alert variant="warning">
-                  <AlertDescription>
-                    先に「停止」タブの「停止方法」から位置情報ベースの停止方法を登録してください。
-                  </AlertDescription>
-                </Alert>
-              ))
-              .otherwise((methods) => (
-                <Select
-                  value={selectedStopMethodId}
-                  onValueChange={setSelectedStopMethodId}
-                  disabled={inputsDisabled}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="停止方法を選択してください" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {methods.map((method) => (
-                      <SelectItem key={method.id} value={method.id}>
-                        {method.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ))}
-          </fieldset>
-
-          <Label className="items-start gap-3 text-sm font-normal">
-            <Checkbox
-              checked={isNfcEnabled}
-              onCheckedChange={(checked) => setIsNfcEnabled(checked === true)}
-              disabled={inputsDisabled}
-              className="mt-0.5"
-            />
-            NFC認証による二段階停止を有効化する
-          </Label>
-
-          <DialogFooter className="flex-col gap-2 sm:flex-col">
-            <div className="flex w-full gap-2">
-              <Button
-                variant="ghost"
-                className="flex-1"
-                disabled={saving}
-                onClick={() => setDialogMode(null)}
-              >
-                キャンセル
-              </Button>
-              <Button className="flex-1" disabled={inputsDisabled} onClick={() => void handleSave()}>
-                保存
-              </Button>
-            </div>
-            {isEdit && (
-              <Button
-                variant="ghost"
-                className="w-full text-destructive hover:bg-destructive/10 hover:text-destructive"
-                disabled={saving || isEditingRingingAlarm}
-                onClick={() => void handleDelete()}
-              >
-                <Trash2 />
-                アラームを削除
-              </Button>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* 保存中（エッジ応答待ち）のブロッキング表示 */}
-      {saving && (
-        <div className="fixed inset-0 z-60 flex flex-col items-center justify-center gap-3 bg-black/70 backdrop-blur-sm">
-          <Spinner className="size-8 text-primary" />
-          <p className="font-bold">
-            {match(savingOp)
-              .with('delete', () => '削除しています…')
-              .otherwise(() => '保存しています…')}
-          </p>
-          <p className="text-xs text-muted-foreground">エッジデバイスへの反映を確認しています</p>
-        </div>
-      )}
+      {/* 編集: フルページ */}
+      <EditAlarmPage
+        alarm={editingAlarm}
+        isRinging={editingAlarm !== null && ringingIds.includes(editingAlarm.id)}
+        stopMethods={stopMethods}
+        onClose={() => setEditingAlarm(null)}
+      />
 
       {/* 未接続・エラー時のオーバーレイ */}
       {alarmManagement.kind === 'blocked' && (
