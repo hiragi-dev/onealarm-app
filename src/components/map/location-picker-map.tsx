@@ -89,6 +89,8 @@ export function LocationPickerMap({
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           maxZoom={19}
+          // タイルの URL が座標そのものなので、せめて参照元は渡さない
+          referrerPolicy="no-referrer"
         />
         {!readOnly && <ClickHandler onSelect={onSelect} />}
         {currentPosition && (

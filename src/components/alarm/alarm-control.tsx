@@ -101,7 +101,13 @@ function AlarmRow({
       role="button"
       tabIndex={0}
       onClick={onEdit}
-      onKeyDown={(e) => e.key === 'Enter' && onEdit()}
+      /* role="button" を名乗る以上、ネイティブの button と同じく Space でも発火させる。
+         Space は既定でページをスクロールさせてしまうので preventDefault が要る */
+      onKeyDown={(e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return
+        e.preventDefault()
+        onEdit()
+      }}
       className={cn(
         'flex cursor-pointer items-center gap-3 py-3 transition-opacity outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
         !alarm.isEnabled && 'opacity-45',

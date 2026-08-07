@@ -62,6 +62,25 @@ function jitter(scale: number): number {
   return (Math.random() - 0.5) * scale
 }
 
+/**
+ * ログに出す前にブローカー URL から資格情報を落とす。
+ *
+ * MQTT では `wss://user:pass@host/mqtt` の形で資格情報を URL に埋める書き方が
+ * 通用するため、貼られた文字列をそのまま流すと、設定画面のログ欄に
+ * パスワードが平文で並ぶ（肩越しの覗き見、スクリーンショット付きの不具合報告で漏れる）。
+ * URL として解釈できない入力は、途中まででも中身を推測させないよう伏せ字にする。
+ */
+function maskCredentials(url: string): string {
+  try {
+    const parsed = new URL(url)
+    parsed.username = ''
+    parsed.password = ''
+    return parsed.toString()
+  } catch {
+    return '(不正な URL)'
+  }
+}
+
 export function DemoProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettings] = React.useState<MqttSettings>(DUMMY_MQTT_SETTINGS)
   const [status, setStatus] = React.useState<BrokerStatus>('connected')
@@ -208,7 +227,7 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
       Effect.gen(function* () {
         yield* Effect.sync(() => {
           setStatus('connecting')
-          appendLog(`connect ${stateRef.current.brokerUrl}`)
+          appendLog(`connect ${maskCredentials(stateRef.current.brokerUrl)}`)
         })
         yield* awaitEdge('接続', () => {
           setStatus('connected')

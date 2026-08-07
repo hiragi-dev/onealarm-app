@@ -47,6 +47,8 @@ export function RingingMiniMap({ target, radiusMeters, position }: Props) {
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           maxZoom={19}
+          // タイルの URL が座標そのものなので、せめて参照元は渡さない
+          referrerPolicy="no-referrer"
         />
         <FitToBoth target={target} radiusMeters={radiusMeters} position={position} />
 
