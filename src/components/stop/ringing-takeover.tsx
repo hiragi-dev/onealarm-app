@@ -36,6 +36,8 @@ export function RingingTakeover() {
     simulatedPosition,
     setSimulatedPosition,
     sendStopCommand,
+    isWalking,
+    setWalking,
   } = useDemo()
   const { alarmManagement } = useAppReadiness()
   const run = useRunEffect()
@@ -80,6 +82,14 @@ export function RingingTakeover() {
                   開発用（本番ビルドには含まれません）
                 </p>
                 <div className="flex flex-col items-start gap-2">
+                  {/* 歩行検知は加速度センサー由来で、開発機を振らないと歩行中にならない。
+                      この画面の主役である WalkStatus の見え方を確かめるために手で切り替える */}
+                  <Button variant="outline" onClick={() => setWalking(!isWalking)}>
+                    {match(isWalking)
+                      .with(true, () => '静止中にする')
+                      .with(false, () => '歩行中にする')
+                      .exhaustive()}
+                  </Button>
                   {target.kind === 'with-method' && (
                     <Button
                       variant="outline"
