@@ -15,6 +15,7 @@ import {
   brokerStatusMeta,
   edgeFields,
   edgeStatusMeta,
+  toneBadgeClass,
   toneTextClass,
 } from '@/components/settings/settings-shared'
 import type { MqttField } from '@/components/settings/settings-shared'
@@ -27,10 +28,10 @@ import type { MqttSettings } from '@/contexts/demo-context'
  * 図として描く。接続線の色とノードの状態色で、どこまで通っているかを示す。
  *
  * 図の下は折りたたまず、全項目を常に出す。設定は4つしかないので隠す必要がなく、
- * 開閉の状態を覚えなくてよくなる。ラベルを左・値を右に寄せた行を細い区切り線で並べ、
- * 「ブローカー」「エッジデバイス」の小見出しで図のノードに対応させている。
- * カードで囲わないのは、アラーム一覧・停止方法一覧と同じく
- * 区切り線だけで構造を出すこの画面群の作りに揃えるため。
+ * 開閉の状態を覚えなくてよくなる。ラベルを左・値を右に寄せた行を並べ、
+ * 図で使っているアイコンを見出しに置くことで、どちらのノードの設定かを示す。
+ * 群の区別に線や面を足さないのは、アラーム一覧と同じく区切り線と余白だけで
+ * 構造を出すため。設定は一覧して読むもので、項目ごとに囲う対象ではない。
  */
 export function ConnectionSettings() {
   const { settings, updateSetting, status } = useDemo()
@@ -41,8 +42,10 @@ export function ConnectionSettings() {
     <div className="space-y-6">
       <NetworkDiagram />
 
-      <div className="space-y-6">
+      {/* 余白そのものが群の区切りなので、行間よりはっきり広く取る */}
+      <div className="space-y-9">
         <FieldGroup
+          icon={<Server className="size-4" />}
           heading="ブローカー"
           fields={brokerFields}
           settings={settings}
@@ -50,6 +53,7 @@ export function ConnectionSettings() {
           editable={editable}
         />
         <FieldGroup
+          icon={<Cpu className="size-4" />}
           heading="エッジデバイス"
           fields={edgeFields}
           settings={settings}
@@ -117,13 +121,6 @@ function NetworkNode({
   tone: Tone
   dimmed?: boolean
 }) {
-  const bgClass = match(tone)
-    .with('success', () => 'bg-success/10 text-success')
-    .with('warning', () => 'bg-warning/10 text-warning')
-    .with('destructive', () => 'bg-destructive/10 text-destructive')
-    .with('neutral', () => 'bg-muted text-muted-foreground')
-    .exhaustive()
-
   return (
     // w-16 で3ノードを同幅に固定する。そうしないと「ブローカー」と「エッジ」の
     // 文字数差で線の長さが変わってしまう
@@ -133,7 +130,9 @@ function NetworkNode({
         dimmed && 'opacity-30',
       )}
     >
-      <div className={cn('rounded-full p-2.5 transition-colors duration-300', bgClass)}>{icon}</div>
+      <div className={cn('rounded-full p-2.5 transition-colors duration-300', toneBadgeClass[tone])}>
+        {icon}
+      </div>
       <span className="text-xs text-muted-foreground">{label}</span>
     </div>
   )
@@ -178,14 +177,16 @@ function NetworkLine({
   )
 }
 
-/** 図のノード1つぶんの設定。小見出し＋伸びる線は開発ツールの群分けと同じ語彙 */
+/** 図のノード1つぶんの設定。見出しのアイコンで、図のどのノードの設定かを示す */
 function FieldGroup({
+  icon,
   heading,
   fields,
   settings,
   updateSetting,
   editable,
 }: {
+  icon: React.ReactNode
   heading: string
   fields: MqttField[]
   settings: MqttSettings
@@ -194,10 +195,9 @@ function FieldGroup({
 }) {
   return (
     <section>
-      <div className="flex items-center gap-2 pb-1">
-        <span className="text-xs font-medium tracking-[0.08em] text-muted-foreground uppercase">
-          {heading}
-        </span>
+      <div className="flex items-center gap-2 pb-2">
+        <span className="text-muted-foreground">{icon}</span>
+        <span className="text-sm font-medium">{heading}</span>
         <span className="h-px flex-1 bg-border" />
       </div>
 

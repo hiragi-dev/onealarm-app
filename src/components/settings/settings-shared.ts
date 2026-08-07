@@ -17,6 +17,14 @@ export const toneTextClass: Record<Tone, string> = {
   destructive: 'text-destructive',
 }
 
+/** tone に対応する丸バッジの色。経路図のノードで使う */
+export const toneBadgeClass: Record<Tone, string> = {
+  neutral: 'bg-muted text-muted-foreground',
+  success: 'bg-success/10 text-success',
+  warning: 'bg-warning/10 text-warning',
+  destructive: 'bg-destructive/10 text-destructive',
+}
+
 /** tone に対応する背景色。ドットなど、面で状態を示すときに使う */
 export const toneBgClass: Record<Tone, string> = {
   neutral: 'bg-muted-foreground',
