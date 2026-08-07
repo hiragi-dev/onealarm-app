@@ -1,6 +1,7 @@
 import { match } from 'ts-pattern'
 import { BellRing, MapPin } from 'lucide-react'
 
+import { RingingMiniMap } from '@/components/map/ringing-mini-map'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -140,6 +141,14 @@ function StopTarget({ target }: { target: RingingTarget }) {
             .otherwise((meters) => (
               <p className="text-3xl font-semibold tabular-nums">{formatDistance(meters)}</p>
             ))}
+          {/* 残り距離の数字だけでは「どっちへ行けばいいか」が分からないため、
+              登録地点と現在位置の位置関係を地図で補う。測位待ちの間も
+              向かう先は決まっているので、停止地点だけ先に見せる */}
+          <RingingMiniMap
+            target={t.stopMethod}
+            radiusMeters={t.stopMethod.radiusMeters}
+            position={t.position}
+          />
           {t.hasArrived && (
             <Alert variant="success">
               <AlertDescription>

@@ -77,8 +77,19 @@ describe('deriveRingingView', () => {
     })
     expect(view).toMatchObject({
       kind: 'ringing',
-      target: { kind: 'with-method', distanceToTarget: null, hasArrived: false },
+      target: { kind: 'with-method', distanceToTarget: null, hasArrived: false, position: null },
     })
+  })
+
+  it('地図に打つための現在地座標を距離と併せて返す', () => {
+    const position = { lat: 35.7, lng: 139.76 }
+    const view = deriveRingingView({
+      ringingStatus: ringing(['alarm-1']),
+      alarms: [ALARM],
+      stopMethods: [STOP_METHOD],
+      position,
+    })
+    expect(view).toMatchObject({ target: { kind: 'with-method', position } })
   })
 
   it('半径の外なら未到達、半径の内なら到達', () => {

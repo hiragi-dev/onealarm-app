@@ -4,6 +4,11 @@ import L from 'leaflet'
 import { match } from 'ts-pattern'
 import { LocateFixed } from 'lucide-react'
 
+import {
+  MAP_ACCENT_COLOR,
+  currentLocationIcon,
+  stopPointIcon,
+} from '@/components/map/marker-icons'
 import { Button } from '@/components/ui/button'
 import { Slider } from '@/components/ui/slider'
 import type { GeoPoint } from '@/lib/geo'
@@ -11,28 +16,6 @@ import {
   MAX_STOP_METHOD_RADIUS_METERS,
   MIN_STOP_METHOD_RADIUS_METERS,
 } from '@/lib/stop-method'
-
-// Leaflet の既定マーカー画像はバンドラー経由だとパスが壊れるため、
-// public/leaflet/ に置いた実体を直接参照するよう上書きする
-const markerIcon = L.icon({
-  iconUrl: '/leaflet/marker-icon.png',
-  iconRetinaUrl: '/leaflet/marker-icon-2x.png',
-  shadowUrl: '/leaflet/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
-})
-
-// 現在地を表す青い丸ドット（選択ピンとは見た目を分ける）
-const currentLocationIcon = L.divIcon({
-  className: '',
-  html:
-    '<div style="width:16px;height:16px;border-radius:50%;background:#4285F4;' +
-    'border:2px solid #fff;box-shadow:0 0 0 2px rgba(66,133,244,0.35);"></div>',
-  iconSize: [16, 16],
-  iconAnchor: [8, 8],
-})
 
 function ClickHandler({ onSelect }: { onSelect: (point: GeoPoint) => void }) {
   useMapEvents({
@@ -120,10 +103,15 @@ export function LocationPickerMap({
           <Circle
             center={[value.lat, value.lng]}
             radius={radiusMeters}
-            pathOptions={{ color: '#4285F4', fillColor: '#4285F4', fillOpacity: 0.15, weight: 2 }}
+            pathOptions={{
+              color: MAP_ACCENT_COLOR,
+              fillColor: MAP_ACCENT_COLOR,
+              fillOpacity: 0.15,
+              weight: 2,
+            }}
           />
         )}
-        {value && <Marker position={[value.lat, value.lng]} icon={markerIcon} />}
+        {value && <Marker position={[value.lat, value.lng]} icon={stopPointIcon} />}
       </MapContainer>
 
       {currentPosition && (
