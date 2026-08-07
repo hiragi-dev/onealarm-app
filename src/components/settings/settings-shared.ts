@@ -1,12 +1,13 @@
 import type { MqttSettings } from '@/contexts/demo-context'
 import type { BrokerStatus, EdgeDeviceStatus } from '@/lib/app-state'
+import type { Tone } from '@/lib/connection-view'
 
 /**
  * 「設定」タブが使う文言と選択肢。
  * ここに置くのはラベル・説明・色の対応づけだけで、レイアウトは呼び出し側が決める。
  */
 
-export type Tone = 'neutral' | 'success' | 'warning' | 'destructive'
+export type { Tone }
 
 /** tone に対応する文字色。状態表示を地の文で示すのに使う */
 export const toneTextClass: Record<Tone, string> = {
@@ -75,30 +76,32 @@ export const edgeStatusMeta: Record<EdgeDeviceStatus, StatusMeta> = {
 
 export type MqttField = {
   key: keyof MqttSettings
+  /** 何の設定かが単体で分かる正式な名前。行には出さず、読み上げ名に使う */
   label: string
+  /** 行の左端に置く短い名前。群の見出しが文脈を補うので、ここは詰めてよい */
+  short: string
   placeholder: string
   help: string
   type: 'text' | 'password'
 }
 
-export const mqttFields: MqttField[] = [
+/**
+ * 図のノードごとに分けて持つ。画面は「どちらのノードの設定か」で群を切るので、
+ * 平らな一覧を毎回 filter するより、最初から分けておくほうが素直
+ */
+export const brokerFields: MqttField[] = [
   {
     key: 'brokerUrl',
     label: 'ブローカー URL (WebSocket)',
+    short: 'URL',
     placeholder: 'wss://xxxxxxxx.s1.eu.hivemq.cloud:8884/mqtt',
     help: 'HiveMQ Cloud の WebSocket エンドポイント（TLS: 8884, パス /mqtt）',
     type: 'text',
   },
   {
-    key: 'deviceId',
-    label: 'デバイスID',
-    placeholder: 'onealarm-demo-01',
-    help: 'エッジデバイス側の DEVICE_ID と一致させてください',
-    type: 'text',
-  },
-  {
     key: 'username',
     label: 'ユーザー名',
+    short: 'ユーザー名',
     placeholder: 'onealarm',
     help: 'ブローカーに登録したアカウント名',
     type: 'text',
@@ -106,9 +109,21 @@ export const mqttFields: MqttField[] = [
   {
     key: 'password',
     label: 'パスワード',
+    short: 'パスワード',
     placeholder: '',
     help: 'ブローカーに登録したパスワード',
     type: 'password',
+  },
+]
+
+export const edgeFields: MqttField[] = [
+  {
+    key: 'deviceId',
+    label: 'デバイスID',
+    short: 'デバイスID',
+    placeholder: 'onealarm-demo-01',
+    help: 'エッジデバイス側の DEVICE_ID と一致させてください',
+    type: 'text',
   },
 ]
 
