@@ -1,0 +1,32 @@
+name: test
+
+# main への push でテストを回す。
+# 手元の検証を通し忘れたまま入った変更を、マージ後すぐに気づけるようにするのが目的。
+on:
+  push:
+    branches: [main]
+  # 履歴を変えずに再実行したいとき用（Actions タブから手動起動できる）
+  workflow_dispatch:
+
+# 同じブランチへ連続で push されたら、古い実行は打ち切って最新だけ残す
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          # 手元の開発環境（Node 26）に合わせる。
+          # npm のキャッシュキーは package-lock.json から作られる。
+          node-version: '26'
+          cache: npm
+
+      # lock ファイルどおりに入れる。CI で依存が勝手に上がらないよう install ではなく ci を使う
+      - run: npm ci
+
+      - run: npm run test
