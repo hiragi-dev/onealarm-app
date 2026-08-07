@@ -1,9 +1,14 @@
 name: test
 
-# main への push でテストを回す。
-# 手元の検証を通し忘れたまま入った変更を、マージ後すぐに気づけるようにするのが目的。
+# main を壊れたまま進ませないためにテストを回す。
+#
+# pull_request はマージ「前」に落とすためのもので、main へ入る変更を事前に止められる。
+# push は PR を経由せず直接 main へコミットしたときの取りこぼし対策。
+# PR 元のブランチへの push は pull_request 側だけが拾うので、二重には走らない。
 on:
   push:
+    branches: [main]
+  pull_request:
     branches: [main]
   # 履歴を変えずに再実行したいとき用（Actions タブから手動起動できる）
   workflow_dispatch:
