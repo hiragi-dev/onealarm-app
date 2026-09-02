@@ -3,16 +3,20 @@ import { match } from 'ts-pattern'
 import { Cpu, Server, Smartphone } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Spinner } from '@/components/ui/spinner'
 import { useDemo } from '@/contexts/demo-context'
+import { useNotify } from '@/contexts/notification-context'
 import { deriveConnectionTones, type Tone } from '@/lib/connection-view'
+import { isEditIntent } from '@/lib/edit-intent'
 import { useRunEffect } from '@/lib/effect-react'
 import { cn } from '@/lib/utils'
 import {
   brokerFields,
   brokerStatusMeta,
+  CONNECTED_LOCK_NOTICE,
   edgeFields,
   edgeStatusMeta,
   toneBadgeClass,
@@ -27,11 +31,13 @@ import type { MqttSettings } from '@/contexts/demo-context'
  * 「アプリ → ブローカー → エッジデバイス」という実際のネットワーク経路を
  * 図として描く。接続線の色とノードの状態色で、どこまで通っているかを示す。
  *
- * 図の下は折りたたまず、全項目を常に出す。設定は4つしかないので隠す必要がなく、
- * 開閉の状態を覚えなくてよくなる。ラベルを左・値を右に寄せた行を並べ、
- * 図で使っているアイコンを見出しに置くことで、どちらのノードの設定かを示す。
- * 群の区別に線や面を足さないのは、アラーム一覧と同じく区切り線と余白だけで
- * 構造を出すため。設定は一覧して読むもので、項目ごとに囲う対象ではない。
+ * 群はカードで囲う。設定画面には「今どうなっているか（経路図と接続操作）」と
+ * 「何を設定するか（ブローカー / エッジデバイス）」という性質の違うものが並ぶので、
+ * 余白の広さだけで区別させるより、面で囲って境界を明示するほうが読み違えにくい。
+ * 図で使っているアイコンをカードの見出しに置き、どちらのノードの設定かを示す。
+ *
+ * 接続操作は経路図と同じカードに入れる。「切断してから編集する」という導線上、
+ * 現在の状態とボタンが離れていると往復させることになるため。
  */
 export function ConnectionSettings() {
   const { settings, updateSetting, status } = useDemo()
@@ -39,36 +45,33 @@ export function ConnectionSettings() {
   const editable = status === 'disconnected'
 
   return (
-    <div className="space-y-6">
-      <NetworkDiagram />
+    <div className="space-y-4">
+      <Card className="gap-4">
+        <CardHeader>
+          <CardTitle>接続状態</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <NetworkDiagram />
+          <ConnectionActions />
+        </CardContent>
+      </Card>
 
-      {/* 余白そのものが群の区切りなので、行間よりはっきり広く取る */}
-      <div className="space-y-9">
-        <FieldGroup
-          icon={<Server className="size-4" />}
-          heading="ブローカー"
-          fields={brokerFields}
-          settings={settings}
-          updateSetting={updateSetting}
-          editable={editable}
-        />
-        <FieldGroup
-          icon={<Cpu className="size-4" />}
-          heading="エッジデバイス"
-          fields={edgeFields}
-          settings={settings}
-          updateSetting={updateSetting}
-          editable={editable}
-        />
-      </div>
-
-      {!editable && (
-        <p className="text-xs text-muted-foreground">
-          接続中は変更できません。切断してから編集してください。
-        </p>
-      )}
-
-      <ConnectionActions />
+      <FieldGroup
+        icon={<Server className="size-4" />}
+        heading="ブローカー"
+        fields={brokerFields}
+        settings={settings}
+        updateSetting={updateSetting}
+        editable={editable}
+      />
+      <FieldGroup
+        icon={<Cpu className="size-4" />}
+        heading="エッジデバイス"
+        fields={edgeFields}
+        settings={settings}
+        updateSetting={updateSetting}
+        editable={editable}
+      />
     </div>
   )
 }
@@ -177,7 +180,7 @@ function NetworkLine({
   )
 }
 
-/** 図のノード1つぶんの設定。見出しのアイコンで、図のどのノードの設定かを示す */
+/** 図のノード1つぶんの設定カード。見出しのアイコンで、図のどのノードの設定かを示す */
 function FieldGroup({
   icon,
   heading,
@@ -193,17 +196,36 @@ function FieldGroup({
   updateSetting: (key: keyof MqttSettings, value: string) => void
   editable: boolean
 }) {
-  return (
-    <section>
-      <div className="flex items-center gap-2 pb-2">
-        <span className="text-muted-foreground">{icon}</span>
-        <span className="text-sm font-medium">{heading}</span>
-        <span className="h-px flex-1 bg-border" />
-      </div>
+  const notify = useNotify()
 
-      <div className="divide-y divide-border">
+  const notifyIfLocked = () => {
+    if (editable) return
+    notify('warning', CONNECTED_LOCK_NOTICE)
+  }
+
+  const handleLockedKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (editable) return
+    if (isEditIntent(e)) notifyIfLocked()
+  }
+
+  return (
+    <Card className="gap-2">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <span className="text-muted-foreground">{icon}</span>
+          {heading}
+        </CardTitle>
+      </CardHeader>
+
+      {/* 見出しとの間隔はカード側の gap で取るので、ここは行間だけを持つ */}
+      <CardContent className="divide-y divide-border">
         {fields.map((field) => (
-          <div key={field.key} className="flex items-center gap-3">
+          <div
+            key={field.key}
+            className="flex items-center gap-3"
+            // ラベル側を叩いたときも拾えるよう、行ごと受ける
+            onClick={notifyIfLocked}
+          >
             <Label
               htmlFor={`connection-${field.key}`}
               className="w-24 shrink-0 text-sm font-normal text-muted-foreground"
@@ -217,18 +239,25 @@ function FieldGroup({
               type={field.type}
               value={settings[field.key]}
               onChange={(e) => updateSetting(field.key, e.target.value)}
-              disabled={!editable}
+              /* disabled ではなく readOnly。disabled はクリックもキー入力も
+                 イベントを発火しないので「編集しようとした」ことを検知できない。
+                 readOnly なら編集は防いだまま検知でき、値の選択・コピーも残る */
+              readOnly={!editable}
+              onKeyDown={handleLockedKeyDown}
               placeholder={field.placeholder}
               autoComplete="off"
               spellCheck={false}
               // 行そのものが入力欄。枠を消して右寄せにすると、読むときは
               // ラベルと値の対応表に、書くときは入力欄に見える
-              className="h-11 min-w-0 flex-1 rounded-none border-0 bg-transparent px-0 text-right focus-visible:ring-0 disabled:opacity-70"
+              className={cn(
+                'h-11 min-w-0 flex-1 rounded-none border-0 bg-transparent px-0 text-right focus-visible:ring-0',
+                !editable && 'opacity-70',
+              )}
             />
           </div>
         ))}
-      </div>
-    </section>
+      </CardContent>
+    </Card>
   )
 }
 

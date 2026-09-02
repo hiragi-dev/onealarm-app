@@ -22,13 +22,21 @@ const severityStyles: Record<Severity, { className: string; Icon: typeof Info }>
 /**
  * 各所で起きたエラーや操作結果を、文字列を画面に埋め込むのではなくポップアップで伝える。
  * 短時間に複数発生した場合も1件ずつ順番に表示する（キュー方式）。
+ *
+ * 同じ内容が既に出ている/待っている間は積まない。ロックされた入力欄を続けて
+ * 叩いたときのように、同じ操作が短時間に繰り返されると同じ文言が何件も並び、
+ * 表示時間 × 件数のあいだポップアップが居座ってしまうため。
  */
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
   const [queue, setQueue] = React.useState<Notification[]>([])
   const current = queue[0] ?? null
 
   const notify = React.useCallback((severity: Severity, message: string) => {
-    setQueue((prev) => [...prev, { key: Date.now() + Math.random(), severity, message }])
+    setQueue((prev) => {
+      const duplicated = prev.some((n) => n.severity === severity && n.message === message)
+      if (duplicated) return prev
+      return [...prev, { key: Date.now() + Math.random(), severity, message }]
+    })
   }, [])
 
   const dismiss = React.useCallback(() => setQueue((prev) => prev.slice(1)), [])
