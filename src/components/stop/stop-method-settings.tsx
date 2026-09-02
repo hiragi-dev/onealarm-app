@@ -5,17 +5,20 @@ import { InfoPopover } from '@/components/common/info-popover'
 import { StaticMapPreview } from '@/components/map/static-map-preview'
 import { StopMethodDialogs } from '@/components/stop/stop-method-dialogs'
 import { useStopMethodEditing } from '@/components/stop/use-stop-method-editing'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { formatAlarmTime } from '@/lib/alarm'
 
 /**
  * 「停止」タブの停止方法の一覧。位置情報ベースの停止地点を登録・編集・削除する。
  *
- * 1件を1枚のカードにして、地図のプレビューを横いっぱいに置いている。
- * 名前だけの一覧だと「会社」がどの入口を指していたか思い出せず、
- * 結局1件ずつ地図を開いて確かめることになるため、駅名や通りが読める大きさを優先した。
+ * 1件は「正方形の地図サムネイル + 文字」の行で、カードには囲わず区切り線で並べる
+ * （カードをやめた接続設定と同じ作り）。地図を大きく出す案・グリッドに並べる案とも
+ * 比較したうえで、地図は「どの場所だったか」を思い出す手がかりに徹しさせ、
+ * 空いた幅で「どのアラームがこの地点で止まるのか（時刻）」を出すこの案を採った。
+ * 名前だけの一覧だと地図を1件ずつ開いて確かめることになるので、サムネイルでも
+ * 実際の地図を出す前提は変えていない。
  * プレビューは触れない（StaticMapPreview）ので、動かして確かめたいときは
- * カードをタップして全画面の地図を開く。
+ * 行をタップして全画面の地図を開く。
  *
  * 保存できるかどうかの判定は validateStopMethodForm（Schema）に任せ、
  * 「使用中だから消せない」「鳴動中だから変えられない」は demo-provider が
@@ -55,66 +58,64 @@ export function StopMethodSettings() {
         ))
         .otherwise((rows) => (
           <>
-            <ul className="space-y-3">
+            <ul className="divide-y divide-white/8">
               {rows.map((row) => (
-                <li
-                  key={row.method.id}
-                  className="overflow-hidden rounded-2xl border border-white/8 bg-white/4"
-                >
+                <li key={row.method.id} className="flex items-center gap-3 py-3">
                   <button
                     type="button"
                     onClick={() => editing.openView(row.method.id)}
                     aria-label={`${row.method.label} を地図で確認`}
-                    className="block w-full text-left outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                    className="shrink-0 outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
                   >
                     <StaticMapPreview
                       point={row.method}
                       radiusMeters={row.method.radiusMeters}
-                      className="h-28 w-full border-b border-white/8"
+                      className="size-20 rounded-lg border border-white/8"
                     />
                   </button>
 
-                  <div className="flex items-center gap-3 px-4 py-3">
-                    <button
-                      type="button"
-                      onClick={() => editing.openView(row.method.id)}
-                      className="min-w-0 flex-1 text-left outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                    >
-                      <span className="flex items-center gap-2">
-                        <span className="truncate font-medium">{row.method.label}</span>
-                        {row.inUse && (
-                          <Badge variant="outline" className="shrink-0 border-white/15">
-                            使用中
-                          </Badge>
+                  <button
+                    type="button"
+                    onClick={() => editing.openView(row.method.id)}
+                    className="min-w-0 flex-1 text-left outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                  >
+                    <span className="block truncate font-medium">{row.method.label}</span>
+                    <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+                      到達判定 半径{row.method.radiusMeters}m
+                    </span>
+                    {/* 「使用中」バッジではなく時刻を出す。消してよいかを判断するには
+                        使われている事実よりどのアラームかが要る */}
+                    <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+                      {match(row.usedBy)
+                        .with([], () => 'どのアラームにも未設定')
+                        .otherwise(
+                          (usedBy) =>
+                            `${usedBy.map((a) => formatAlarmTime(a.time)).join('・')} のアラームで使用中`,
                         )}
-                      </span>
-                      <span className="block truncate text-xs text-muted-foreground">
-                        到達判定 半径{row.method.radiusMeters}m
-                      </span>
-                    </button>
+                    </span>
+                  </button>
 
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      aria-label={`${row.method.label} を削除`}
-                      title={match(row.inUse)
-                        .with(true, () => 'いずれかのアラームで使用中のため削除できません')
-                        .with(false, () => undefined)
-                        .exhaustive()}
-                      disabled={row.inUse}
-                      onClick={() => void editing.remove(row.method.id)}
-                      className="shrink-0 text-muted-foreground hover:text-destructive"
-                    >
-                      <Trash2 />
-                    </Button>
-                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={`${row.method.label} を削除`}
+                    title={match(row.inUse)
+                      .with(true, () => 'いずれかのアラームで使用中のため削除できません')
+                      .with(false, () => undefined)
+                      .exhaustive()}
+                    disabled={row.inUse}
+                    onClick={() => void editing.remove(row.method.id)}
+                    className="shrink-0 text-muted-foreground hover:text-destructive"
+                  >
+                    <Trash2 />
+                  </Button>
                 </li>
               ))}
             </ul>
 
             <div className="space-y-1">
               <p className="text-xs text-muted-foreground/60">
-                カードをタップすると地図で確認・編集できます
+                行をタップすると地図で確認・編集できます
               </p>
               {/* プレビューはタイル画像を直に読んでいて Leaflet の出典表示が付かないので、
                   ここで出す */}
