@@ -4,8 +4,14 @@ import { Slot } from "radix-ui"
 
 import { cn } from "@/lib/utils"
 
+/**
+ * 角丸は size ごとに変える。カードが rounded-2xl / 3xl の画面なので、
+ * ボタンだけ角が立っていると浮く。かといって一律に大きくすると、
+ * 背の低いボタン（h-6 / h-8）が丸くなりすぎて印象が変わるため、
+ * 高さに比例させて 小: lg / 標準・大: xl の2段階にしている。
+ */
 const buttonVariants = cva(
-  "inline-flex shrink-0 items-center justify-center gap-2 rounded-md text-sm font-medium whitespace-nowrap transition-all outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "inline-flex shrink-0 items-center justify-center gap-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
@@ -22,12 +28,12 @@ const buttonVariants = cva(
       },
       size: {
         default: "h-9 px-4 py-2 has-[>svg]:px-3",
-        xs: "h-6 gap-1 rounded-md px-2 text-xs has-[>svg]:px-1.5 [&_svg:not([class*='size-'])]:size-3",
-        sm: "h-8 gap-1.5 rounded-md px-3 has-[>svg]:px-2.5",
-        lg: "h-10 rounded-md px-6 has-[>svg]:px-4",
+        xs: "h-6 gap-1 rounded-lg px-2 text-xs has-[>svg]:px-1.5 [&_svg:not([class*='size-'])]:size-3",
+        sm: "h-8 gap-1.5 rounded-lg px-3 has-[>svg]:px-2.5",
+        lg: "h-10 rounded-xl px-6 has-[>svg]:px-4",
         icon: "size-9",
-        "icon-xs": "size-6 rounded-md [&_svg:not([class*='size-'])]:size-3",
-        "icon-sm": "size-8",
+        "icon-xs": "size-6 rounded-lg [&_svg:not([class*='size-'])]:size-3",
+        "icon-sm": "size-8 rounded-lg",
         "icon-lg": "size-10",
       },
     },
