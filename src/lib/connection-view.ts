@@ -58,3 +58,41 @@ export function deriveConnectionTones(input: {
     edgeUnreachable: !connected,
   }
 }
+
+/**
+ * 接続ボタンが今どの操作を担うか。
+ *
+ * 「繋がっていないから接続」「一度失敗したから接続し直し」「ブローカーには繋がったが
+ * エッジが応答しないから繋ぎ直し」を区別する。特に最後は broker が connected のままなので、
+ * 「接続済みなら押せない」という素直な条件だと手動で立て直す手段が無くなる。
+ * 設定画面のボタンと、アラーム一覧を覆うオーバーレイのボタンが同じ判断を使う。
+ */
+export type ConnectAction =
+  /** 接続先が未設定。押せない */
+  | { kind: 'unconfigured' }
+  /** 接続処理の途中。押せない */
+  | { kind: 'busy' }
+  /** 端まで通っている。することが無い */
+  | { kind: 'connected' }
+  /** まだ繋いでいない。新規に接続する */
+  | { kind: 'connect' }
+  /** 失敗した、またはエッジが応答しない。切ってから繋ぎ直す */
+  | { kind: 'reconnect' }
+
+export function deriveConnectAction(input: {
+  broker: BrokerStatus
+  edge: EdgeDeviceStatus
+  configured: boolean
+}): ConnectAction {
+  if (!input.configured) return { kind: 'unconfigured' }
+  return match(input)
+    .with({ broker: 'connecting' }, () => ({ kind: 'busy' }) as const)
+    .with({ broker: 'connected', edge: 'online' }, () => ({ kind: 'connected' }) as const)
+    // 繋がった直後の unknown は応答待ちであって失敗ではない。ここで繋ぎ直させると
+    // 届きかけの全状態を自分で捨てることになる
+    .with({ broker: 'connected', edge: 'unknown' }, () => ({ kind: 'busy' }) as const)
+    .with({ broker: 'connected', edge: 'offline' }, () => ({ kind: 'reconnect' }) as const)
+    .with({ broker: 'error' }, () => ({ kind: 'reconnect' }) as const)
+    .with({ broker: 'disconnected' }, () => ({ kind: 'connect' }) as const)
+    .exhaustive()
+}

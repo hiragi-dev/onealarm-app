@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { deriveConnectionTones } from '@/lib/connection-view'
+import { deriveConnectAction, deriveConnectionTones } from '@/lib/connection-view'
 
 describe('deriveConnectionTones', () => {
   it('未接続ならエッジ側の区間は判定不能として扱う', () => {
@@ -41,5 +41,45 @@ describe('deriveConnectionTones', () => {
     expect(tones.brokerLink).toBe('success')
     expect(tones.edgeLink).toBe('destructive')
     expect(tones.edgeUnreachable).toBe(false)
+  })
+})
+
+describe('deriveConnectAction', () => {
+  const configured = true
+
+  it('接続先が未設定なら押せない', () => {
+    expect(deriveConnectAction({ broker: 'disconnected', edge: 'unknown', configured: false })).toEqual(
+      { kind: 'unconfigured' },
+    )
+  })
+
+  it('未接続なら新規接続、失敗後は繋ぎ直しになる（失敗したままで手詰まりにしない）', () => {
+    expect(deriveConnectAction({ broker: 'disconnected', edge: 'unknown', configured })).toEqual({
+      kind: 'connect',
+    })
+    expect(deriveConnectAction({ broker: 'error', edge: 'unknown', configured })).toEqual({
+      kind: 'reconnect',
+    })
+  })
+
+  it('ブローカーに繋がったままエッジが応答しない場合も繋ぎ直せる', () => {
+    expect(deriveConnectAction({ broker: 'connected', edge: 'offline', configured })).toEqual({
+      kind: 'reconnect',
+    })
+  })
+
+  it('接続中と、繋がった直後の応答待ちは押せない', () => {
+    expect(deriveConnectAction({ broker: 'connecting', edge: 'unknown', configured })).toEqual({
+      kind: 'busy',
+    })
+    expect(deriveConnectAction({ broker: 'connected', edge: 'unknown', configured })).toEqual({
+      kind: 'busy',
+    })
+  })
+
+  it('端まで通っていればすることが無い', () => {
+    expect(deriveConnectAction({ broker: 'connected', edge: 'online', configured })).toEqual({
+      kind: 'connected',
+    })
   })
 })

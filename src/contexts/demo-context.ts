@@ -60,6 +60,8 @@ export type DemoStore = {
   status: BrokerStatus
   edgeStatus: EdgeDeviceStatus
   connect: Effect.Effect<void, EdgeTimeoutError>
+  /** 失敗後・エッジ無応答時の立て直し。繋がっていれば切ってから connect する */
+  reconnect: Effect.Effect<void, EdgeTimeoutError>
   disconnect: () => void
   log: LogEntry[]
   sendPowerCommand: (power: 'on' | 'off') => Effect.Effect<void, CommandError>

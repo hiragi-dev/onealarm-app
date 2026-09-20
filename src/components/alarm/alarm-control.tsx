@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { match, P } from 'ts-pattern'
-import { AlarmClockOff, CloudOff, Footprints, MapPin, Plus } from 'lucide-react'
+import { AlarmClockOff, CloudOff, Footprints, MapPin, Plus, RefreshCw } from 'lucide-react'
 
 import { AddAlarmWizard } from '@/components/alarm/add-alarm-wizard'
 import { EditAlarmPage } from '@/components/alarm/edit-alarm-page'
@@ -16,6 +16,7 @@ import { useAppReadiness } from '@/hooks/use-app-readiness'
 import { useRunEffect } from '@/lib/effect-react'
 import { formatAlarmTime, formatDaysOfWeek, type Alarm } from '@/lib/alarm'
 import { blockReasonLabel, type BlockReason, type BrokerConnection } from '@/lib/app-state'
+import { deriveConnectAction } from '@/lib/connection-view'
 import { canCreateAlarm, type StopMethod } from '@/lib/stop-method'
 import { cn } from '@/lib/utils'
 
@@ -155,7 +156,13 @@ function AlarmRow({
   )
 }
 
-/** 未接続・エラー時に一覧を覆って操作させないようにするオーバーレイ */
+/**
+ * 未接続・エラー時に一覧を覆って操作させないようにするオーバーレイ。
+ *
+ * 立て直しのボタンをここにも置く。理由だけ並べて設定タブへ行かせると、
+ * 失敗のたびにタブを往復することになるため。判断は設定画面のボタンと同じ
+ * deriveConnectAction で、押せる状態（connect / reconnect）のときだけ出す。
+ */
 function ConnectionOverlay({
   broker,
   reasons,
@@ -163,6 +170,11 @@ function ConnectionOverlay({
   broker: BrokerConnection
   reasons: BlockReason[]
 }) {
+  const { settings, edgeStatus, connect, reconnect } = useDemo()
+  const run = useRunEffect()
+  const configured = Boolean(settings.brokerUrl && settings.deviceId)
+  const action = deriveConnectAction({ broker: broker.kind, edge: edgeStatus, configured })
+
   return (
     <div className="absolute -inset-4 z-10 flex items-center justify-center rounded-3xl bg-black/50 p-4 backdrop-blur-sm">
       <div className="w-full max-w-sm rounded-3xl border border-white/10 bg-[rgba(20,23,31,0.85)] px-4 py-8 text-center shadow-2xl backdrop-blur-xl">
@@ -195,6 +207,20 @@ function ConnectionOverlay({
                   </Alert>
                 ))}
               </div>
+              {match(action)
+                .with({ kind: 'connect' }, () => (
+                  <Button className="mt-4 w-full" onClick={() => void run(connect)}>
+                    <RefreshCw />
+                    接続
+                  </Button>
+                ))
+                .with({ kind: 'reconnect' }, () => (
+                  <Button className="mt-4 w-full" onClick={() => void run(reconnect)}>
+                    <RefreshCw />
+                    再接続
+                  </Button>
+                ))
+                .otherwise(() => null)}
             </>
           ))}
       </div>

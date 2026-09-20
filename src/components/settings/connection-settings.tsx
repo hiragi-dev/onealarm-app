@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label'
 import { Spinner } from '@/components/ui/spinner'
 import { useDemo } from '@/contexts/demo-context'
 import { useNotify } from '@/contexts/notification-context'
-import { deriveConnectionTones, type Tone } from '@/lib/connection-view'
+import { deriveConnectAction, deriveConnectionTones, type Tone } from '@/lib/connection-view'
 import { isEditIntent } from '@/lib/edit-intent'
 import { useRunEffect } from '@/lib/effect-react'
 import { cn } from '@/lib/utils'
@@ -265,22 +265,30 @@ function FieldGroup({
 
 /** 接続/切断 */
 function ConnectionActions() {
-  const { settings, status, connect, disconnect } = useDemo()
+  const { settings, status, edgeStatus, connect, reconnect, disconnect } = useDemo()
   const run = useRunEffect()
 
-  const connected = status === 'connected'
   const configured = Boolean(settings.brokerUrl && settings.deviceId)
+  const action = deriveConnectAction({ broker: status, edge: edgeStatus, configured })
 
   return (
     <div className="flex gap-2">
       <Button
         className="flex-1"
-        onClick={() => void run(connect)}
-        disabled={status === 'connecting' || connected || !configured}
+        onClick={() =>
+          void match(action)
+            .with({ kind: 'connect' }, () => run(connect))
+            .with({ kind: 'reconnect' }, () => run(reconnect))
+            .otherwise(() => Promise.resolve())
+        }
+        disabled={match(action)
+          .with({ kind: 'connect' }, { kind: 'reconnect' }, () => false)
+          .otherwise(() => true)}
       >
-        {status === 'connecting' && <Spinner className="size-4" />}
-        {match(status)
-          .with('connecting', () => '接続中…')
+        {action.kind === 'busy' && <Spinner className="size-4" />}
+        {match(action)
+          .with({ kind: 'busy' }, () => '接続中…')
+          .with({ kind: 'reconnect' }, () => '再接続')
           .otherwise(() => '接続')}
       </Button>
       <Button variant="outline" onClick={disconnect} disabled={status === 'disconnected'}>

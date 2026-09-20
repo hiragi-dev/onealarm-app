@@ -258,6 +258,18 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
     appendLog('disconnected')
   }, [appendLog])
 
+  /**
+   * 接続の立て直し。connect は「繋いで全状態を受け取る」までを1回分として書いてあり、
+   * ブローカーに繋がったままエッジだけが応答しない状態からは、切ってから繋ぎ直す
+   * 以外に購読と get-state をやり直す手段が無い（通信層も同じ作り）。
+   * disconnected / error からでも同じ手順で問題ないので、場合分けせず常に切ってから繋ぐ
+   */
+  const reconnect = React.useMemo(
+    (): Effect.Effect<void, EdgeTimeoutError> =>
+      Effect.sync(disconnect).pipe(Effect.zipRight(connect)),
+    [connect, disconnect],
+  )
+
   const updateSetting = React.useCallback((key: keyof MqttSettings, value: string) => {
     setSettings((prev) => ({ ...prev, [key]: value }))
   }, [])
@@ -445,6 +457,7 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
     status,
     edgeStatus,
     connect,
+    reconnect,
     disconnect,
     log,
     sendPowerCommand,
