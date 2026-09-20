@@ -35,7 +35,7 @@ export function StopMethodSettings() {
         <div className="flex items-center gap-1">
           {/* 見出しに「（位置情報）」のような但し書きを足さない。
               説明は情報ボタンへ寄せ、見出しは名前だけにしておく */}
-          <h2 className="text-lg font-extrabold tracking-tight">停止方法</h2>
+          <h1 className="text-3xl font-extrabold tracking-tight">停止方法</h1>
           <InfoPopover>
             アラームを止めるために移動する地点です。地図上の地点と、到達とみなす半径で決めます。
             「アラーム」タブでアラームごとに1つ割り当て、鳴っている間にその地点まで移動すると
