@@ -105,7 +105,7 @@ export function StopMethodViewDialog({
             />
           )}
         </div>
-        <DialogFooter className="flex-row items-center gap-3 p-4">
+        <DialogFooter className="flex-row items-center gap-3 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
           <p
             className={cn(
               'flex-1 text-sm',
@@ -174,7 +174,7 @@ export function StopMethodPickDialog({
             readOnly={blocked}
           />
         </div>
-        <DialogFooter className="flex-row items-center gap-3 p-4">
+        <DialogFooter className="flex-row items-center gap-3 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
           <p
             className={cn(
               'flex-1 text-sm',

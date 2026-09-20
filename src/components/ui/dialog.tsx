@@ -65,11 +65,14 @@ function DialogContent({
     .with({ fullScreen: false }, () =>
       'top-1/2 left-1/2 w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 gap-4 rounded-3xl p-6 duration-200 data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95',
     )
+    // 全画面は body の外（ポータル）に fixed で描かれ、body に付けたセーフエリアの余白が効かない。
+    // ステータスバーの下に見出しが潜らないよう、自分で上端の余白を持つ。下端は各画面の
+    // 最下段（フッター・ボタン列）が max(…, env(safe-area-inset-bottom)) で持つ
     .with({ fullScreen: true, motion: 'sheet' }, () =>
-      'inset-0 h-full w-full duration-300 ease-out data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom',
+      'inset-0 h-full w-full pt-[env(safe-area-inset-top)] duration-300 ease-out data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom',
     )
     .with({ fullScreen: true, motion: 'push' }, () =>
-      'inset-0 h-full w-full duration-300 ease-out data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right',
+      'inset-0 h-full w-full pt-[env(safe-area-inset-top)] duration-300 ease-out data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right',
     )
     .exhaustive()
 

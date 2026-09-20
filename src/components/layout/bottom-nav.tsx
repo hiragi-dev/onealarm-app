@@ -25,7 +25,9 @@ const icons: Record<TabPath, LucideIcon> = {
 export function BottomNav() {
   return (
     // 外側は当たり判定を持たない。錠剤の左右の余白で下の内容を触れなくしないため
-    <nav className="pointer-events-none fixed inset-x-0 bottom-0 z-30 px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
+    // 下の余白はセーフエリア（ホームインジケータ）の直上に 8px。ブラウザのタブ（セーフエリア 0）では
+    // 20px を下限にする。index.css の --bottom-nav-space と同じ式
+    <nav className="pointer-events-none fixed inset-x-0 bottom-0 z-30 px-4 pb-[max(1.25rem,calc(0.5rem+env(safe-area-inset-bottom)))]">
       <div className="pointer-events-auto mx-auto max-w-md overflow-hidden rounded-full border border-white/8 bg-[rgba(16,18,24,0.7)] shadow-[0_12px_40px_rgba(0,0,0,0.6)] backdrop-blur-xl">
         <ul className="flex h-17">
           {TABS.map(({ to, label, exact }) => {

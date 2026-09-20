@@ -332,7 +332,7 @@ export function AddAlarmWizard({
             .exhaustive()}
         </div>
 
-        <div className="flex shrink-0 gap-2 px-4 pt-3 pb-6">
+        <div className="flex shrink-0 gap-2 px-4 pt-3 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
           <Button
             variant="ghost"
             className="flex-1 border border-border"

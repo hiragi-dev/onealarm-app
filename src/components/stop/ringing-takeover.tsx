@@ -65,7 +65,8 @@ export function RingingTakeover() {
     .with({ kind: 'silent' }, () => null)
     .with({ kind: 'ringing' }, ({ target }) => (
       <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(10,10,12,0.97)] backdrop-blur-xl animate-in fade-in-0">
-        <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-6 pt-10 pb-10">
+        {/* body の外に fixed で描かれるので、セーフエリアの余白を自分で持つ */}
+        <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-6 pt-[calc(2rem+env(safe-area-inset-top))] pb-[calc(2rem+env(safe-area-inset-bottom))]">
           {/* 鳴動中であることの見出し。状態なので見出し文ではなくチップにする */}
           <div>
             <Badge variant="warning" className="gap-1.5 px-3.5 py-1.5 text-sm [&>svg]:size-4">

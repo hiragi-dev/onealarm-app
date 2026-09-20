@@ -43,10 +43,13 @@
   --ring: #3a86ff;
 }
 
-/* 浮いている下部ナビが覆う高さ。錠剤（h-17）+ 下の余白（pb-6）+ セーフエリア。
-   スクロール領域の内側の余白（pb-nav）がこれを見る */
+/* 浮いている下部ナビが覆う高さ。錠剤（h-17）+ 下の余白（bottom-nav.tsx と同じ式）。
+   スクロール領域の内側の余白（pb-nav）がこれを見る。body のセーフエリア余白ぶんは
+   スクロール領域の外なので引いておく */
 :root {
-  --bottom-nav-space: calc(4.25rem + 1.5rem + env(safe-area-inset-bottom));
+  --bottom-nav-space: calc(
+    4.25rem + max(1.25rem, 0.5rem + env(safe-area-inset-bottom)) - env(safe-area-inset-bottom)
+  );
 }
 
 /* スクロール領域の下端の余白。浮いている下部ナビに最後の項目が隠れないようにする */
