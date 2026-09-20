@@ -10,7 +10,12 @@
     />
     <meta name="theme-color" content="#0a0a0a" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <!-- black-translucent にすると iOS のホーム画面から開いたとき、描画は全画面なのに
+         fixed の基準になる高さがステータスバーぶん短くなり、下部ナビや全画面ダイアログが
+         下端に届かず画面の下に空白が残る。旧アプリ（eager-alarm-app）と同じく不透明にする。
+         背景が黒なので black が馴染む。表示領域はステータスバーの下から始まり、
+         env(safe-area-inset-top) は 0 になる（下のセーフエリアは viewport-fit=cover で残る） -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
     <meta name="apple-mobile-web-app-title" content="OneAlarm" />
     <meta name="mobile-web-app-capable" content="yes" />
     <title>OneAlarm</title>
