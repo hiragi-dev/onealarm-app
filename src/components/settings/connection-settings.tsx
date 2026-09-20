@@ -2,6 +2,7 @@ import * as React from 'react'
 import { match } from 'ts-pattern'
 import { Cpu, Server, Smartphone } from 'lucide-react'
 
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -20,7 +21,6 @@ import {
   edgeFields,
   edgeStatusMeta,
   toneBadgeClass,
-  toneTextClass,
 } from '@/components/settings/settings-shared'
 import type { MqttField } from '@/components/settings/settings-shared'
 import type { MqttSettings } from '@/contexts/demo-context'
@@ -168,14 +168,16 @@ function NetworkLine({
     >
       <div
         className={cn(
-          'h-px w-full transition-colors duration-300',
+          'h-0.5 w-full rounded-full transition-colors duration-300',
           lineClass,
           animating && 'animate-pulse',
         )}
       />
-      <span className={cn('text-xs font-medium transition-colors', toneTextClass[tone])}>
+      {/* 状態名は線の色と同じ tone のチップで出す。線の色だけだと色弱の人に
+          区別がつかず、文字だけだと線と結びつかないので両方に同じ色を乗せる */}
+      <Badge variant={tone} className={cn(animating && 'animate-pulse')}>
         {label}
-      </span>
+      </Badge>
     </div>
   )
 }
@@ -228,7 +230,7 @@ function FieldGroup({
           >
             <Label
               htmlFor={`connection-${field.key}`}
-              className="w-24 shrink-0 text-sm font-normal text-muted-foreground"
+              className="w-24 shrink-0 text-sm text-muted-foreground"
             >
               {field.short}
             </Label>

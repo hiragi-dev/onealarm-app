@@ -34,7 +34,7 @@ export function DayOfWeekPicker({
             onClick={() => toggleDay(day)}
             aria-pressed={selected}
             className={cn(
-              'aspect-square flex-1 rounded-xl border text-sm font-bold transition-transform disabled:pointer-events-none disabled:opacity-50',
+              'aspect-square flex-1 rounded-full border text-sm font-extrabold transition-transform disabled:pointer-events-none disabled:opacity-50',
               match(selected)
                 .with(true, () => 'scale-105 border-primary bg-primary text-primary-foreground')
                 .with(false, () => 'border-white/15 text-muted-foreground hover:bg-white/8')

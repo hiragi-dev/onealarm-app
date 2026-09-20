@@ -3,6 +3,7 @@ import { BellRing, MapPin } from 'lucide-react'
 
 import { RingingMiniMap } from '@/components/map/ringing-mini-map'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Spinner } from '@/components/ui/spinner'
@@ -55,10 +56,12 @@ export function RingingTakeover() {
     .with({ kind: 'ringing' }, ({ target }) => (
       <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(10,10,12,0.97)] backdrop-blur-xl animate-in fade-in-0">
         <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-6 pt-10 pb-10">
-          {/* 鳴動中であることの見出し */}
-          <div className="flex items-center gap-2 text-warning">
-            <BellRing className="size-5 animate-pulse" />
-            <span className="text-sm font-bold tracking-wide">アラームが鳴っています</span>
+          {/* 鳴動中であることの見出し。状態なので見出し文ではなくチップにする */}
+          <div>
+            <Badge variant="warning" className="gap-1.5 px-3.5 py-1.5 text-sm [&>svg]:size-4">
+              <BellRing className="animate-pulse" />
+              アラームが鳴っています
+            </Badge>
           </div>
 
           {alarmManagement.kind === 'blocked' && (
@@ -79,9 +82,10 @@ export function RingingTakeover() {
           {import.meta.env.DEV && (
             <Card className="border-dashed border-warning/50">
               <CardContent className="space-y-3">
-                <p className="text-xs font-bold text-warning">
-                  開発用（本番ビルドには含まれません）
-                </p>
+                <div className="flex items-center gap-2">
+                  <Badge variant="warning">開発用</Badge>
+                  <span className="text-xs text-muted-foreground">本番ビルドには含まれません</span>
+                </div>
                 <div className="flex flex-col items-start gap-2">
                   {/* 歩行検知は加速度センサー由来で、開発機を振らないと歩行中にならない。
                       この画面の主役である WalkStatus の見え方を確かめるために手で切り替える */}
@@ -127,8 +131,11 @@ function StopTarget({ target }: { target: RingingTarget }) {
       <Card>
         <CardContent className="space-y-2">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <MapPin className="size-4 text-primary" />
-            停止方法: {t.stopMethod.label} まで
+            <Badge variant="info">
+              <MapPin />
+              <span className="truncate">{t.stopMethod.label}</span>
+            </Badge>
+            まで
           </div>
           {match(t.distanceToTarget)
             // 初回測位には数秒かかることがあるため、待機中であることを明示する
@@ -139,7 +146,9 @@ function StopTarget({ target }: { target: RingingTarget }) {
               </div>
             ))
             .otherwise((meters) => (
-              <p className="text-3xl font-semibold tabular-nums">{formatDistance(meters)}</p>
+              <p className="text-3xl font-extrabold tracking-tight tabular-nums">
+                {formatDistance(meters)}
+              </p>
             ))}
           {/* 残り距離の数字だけでは「どっちへ行けばいいか」が分からないため、
               登録地点と現在位置の位置関係を地図で補う。測位待ちの間も

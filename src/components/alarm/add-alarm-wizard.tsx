@@ -7,6 +7,7 @@ import { DayOfWeekPicker } from '@/components/alarm/day-of-week-picker'
 import { InfoPopover } from '@/components/common/info-popover'
 import { LocationPickerMap } from '@/components/map/location-picker-map'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -42,7 +43,7 @@ function SummaryRow({
     <div className="flex items-center gap-3 py-3">
       <div className="min-w-0 flex-1">
         <p className="text-[0.68rem] tracking-[0.06em] text-muted-foreground uppercase">{label}</p>
-        <p className="mt-0.5 truncate text-sm font-semibold">{value}</p>
+        <p className="mt-0.5 truncate text-sm">{value}</p>
       </div>
       <Button variant="ghost" size="icon-sm" aria-label={`${label}を変更`} onClick={onEdit}>
         <Pencil className="size-4" />
@@ -170,20 +171,22 @@ export function AddAlarmWizard({
             {Array.from({ length: STEP_COUNT }).map((_, i) => (
               <div
                 key={i}
-                className={cn('h-1 flex-1 rounded-full', i <= step ? 'bg-primary' : 'bg-white/10')}
+                className={cn('h-1.5 flex-1 rounded-full bg-white/10', i <= step && 'bg-primary')}
               />
             ))}
           </div>
         </div>
-        <p className="shrink-0 px-4 pb-3 text-[0.7rem] text-muted-foreground tabular-nums">
-          STEP {step + 1} / {STEP_COUNT}
-        </p>
+        <div className="shrink-0 px-4 pb-3">
+          <Badge variant="info" className="tabular-nums">
+            STEP {step + 1} / {STEP_COUNT}
+          </Badge>
+        </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-4">
           {match(step)
             .with(0, () => (
               <div className="flex h-full flex-col items-center justify-center gap-1 text-center">
-                <h2 className="text-xl font-bold">何時に鳴らしますか？</h2>
+                <h2 className="text-xl font-extrabold tracking-tight">何時に鳴らしますか？</h2>
                 <p className="mb-2 text-sm text-muted-foreground">
                   この時刻に、設定した曜日でアラームが鳴ります。
                 </p>
@@ -193,13 +196,13 @@ export function AddAlarmWizard({
                   onChange={(e) => setTimeInput(e.target.value)}
                   disabled={saving}
                   aria-label="時刻"
-                  className="mx-auto h-auto w-auto justify-center border-0 bg-transparent py-2 text-center text-5xl font-extralight tracking-wider tabular-nums focus-visible:ring-0 md:text-5xl [&::-webkit-calendar-picker-indicator]:hidden"
+                  className="mx-auto h-auto w-auto justify-center border-0 bg-transparent py-2 text-center text-5xl font-extrabold tracking-tight tabular-nums focus-visible:ring-0 md:text-5xl [&::-webkit-calendar-picker-indicator]:hidden"
                 />
               </div>
             ))
             .with(1, () => (
               <div className="flex h-full flex-col justify-center gap-1">
-                <h2 className="text-center text-xl font-bold">どの曜日に鳴らしますか？</h2>
+                <h2 className="text-center text-xl font-extrabold tracking-tight">どの曜日に鳴らしますか？</h2>
                 <p className="mb-6 text-center text-sm text-muted-foreground">
                   1つ以上選んでください。
                 </p>
@@ -209,7 +212,7 @@ export function AddAlarmWizard({
             .with(2, () => (
               <div className="pt-2">
                 <div className="mb-1 flex items-center gap-1">
-                  <h2 className="text-xl font-bold">どこまで行けば止めますか？</h2>
+                  <h2 className="text-xl font-extrabold tracking-tight">どこまで行けば止めますか？</h2>
                   <InfoPopover>
                     鳴動中は、ここで選んだ地点まで移動しない限りアラームは止まりません。
                   </InfoPopover>
@@ -233,10 +236,8 @@ export function AddAlarmWizard({
                           <div
                             key={method.id}
                             className={cn(
-                              'overflow-hidden rounded-2xl border transition-colors',
-                              selected
-                                ? 'border-primary bg-primary/8'
-                                : 'border-white/10 bg-white/4',
+                              'overflow-hidden rounded-3xl border border-white/10 bg-white/4 transition-colors',
+                              selected && 'border-primary bg-primary/8',
                             )}
                           >
                             <button
@@ -249,16 +250,14 @@ export function AddAlarmWizard({
                             >
                               <span
                                 className={cn(
-                                  'flex size-9 shrink-0 items-center justify-center rounded-full',
-                                  selected
-                                    ? 'bg-primary text-primary-foreground'
-                                    : 'bg-white/8 text-muted-foreground',
+                                  'flex size-9 shrink-0 items-center justify-center rounded-full bg-white/8 text-muted-foreground transition-colors',
+                                  selected && 'bg-primary text-primary-foreground',
                                 )}
                               >
                                 <MapPin className="size-4" />
                               </span>
                               <span className="min-w-0 flex-1">
-                                <span className="block truncate font-semibold">{method.label}</span>
+                                <span className="block truncate">{method.label}</span>
                                 <span className="block truncate text-xs text-muted-foreground">
                                   到達判定 半径{method.radiusMeters}m
                                 </span>
@@ -288,7 +287,7 @@ export function AddAlarmWizard({
             ))
             .with(3, () => (
               <div className="pt-2">
-                <h2 className="text-xl font-bold">この内容で決定しますか？</h2>
+                <h2 className="text-xl font-extrabold tracking-tight">この内容で決定しますか？</h2>
                 <p className="mb-2 text-sm text-muted-foreground">
                   保存すると一覧に反映されます。
                 </p>
@@ -305,11 +304,9 @@ export function AddAlarmWizard({
                   />
                   <SummaryRow
                     label="停止方法"
-                    value={
-                      selectedMethod
-                        ? `${selectedMethod.label} ・ 半径${selectedMethod.radiusMeters}m`
-                        : '未選択'
-                    }
+                    value={match(selectedMethod)
+                      .with(undefined, () => '未選択')
+                      .otherwise((m) => `${m.label} ・ 半径${m.radiusMeters}m`)}
                     onEdit={() => setStep(2)}
                   />
                   <div className="flex items-center gap-3 py-3">
@@ -317,9 +314,12 @@ export function AddAlarmWizard({
                       <p className="text-[0.68rem] tracking-[0.06em] text-muted-foreground uppercase">
                         NFC認証
                       </p>
-                      <p className="mt-0.5 text-sm font-semibold">
-                        {isNfcEnabled ? '有効' : '無効'}
-                      </p>
+                      <div className="mt-1">
+                        {match(isNfcEnabled)
+                          .with(true, () => <Badge variant="success">有効</Badge>)
+                          .with(false, () => <Badge variant="neutral">無効</Badge>)
+                          .exhaustive()}
+                      </div>
                     </div>
                     <Switch
                       checked={isNfcEnabled}
@@ -362,7 +362,7 @@ export function AddAlarmWizard({
       {saving && (
         <div className="fixed inset-0 z-60 flex flex-col items-center justify-center gap-3 bg-black/70 backdrop-blur-sm">
           <Spinner className="size-8 text-primary" />
-          <p className="font-bold">保存しています…</p>
+          <p className="font-extrabold">保存しています…</p>
           <p className="text-xs text-muted-foreground">エッジデバイスへの反映を確認しています</p>
         </div>
       )}

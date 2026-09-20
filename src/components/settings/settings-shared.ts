@@ -9,14 +9,6 @@ import type { Tone } from '@/lib/connection-view'
 
 export type { Tone }
 
-/** tone に対応する文字色。状態表示を地の文で示すのに使う */
-export const toneTextClass: Record<Tone, string> = {
-  neutral: 'text-muted-foreground',
-  success: 'text-success',
-  warning: 'text-warning',
-  destructive: 'text-destructive',
-}
-
 /** tone に対応する丸バッジの色。経路図のノードで使う */
 export const toneBadgeClass: Record<Tone, string> = {
   neutral: 'bg-muted text-muted-foreground',

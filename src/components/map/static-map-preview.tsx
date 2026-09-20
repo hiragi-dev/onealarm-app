@@ -78,7 +78,7 @@ export function StaticMapPreview({ point, radiusMeters, className }: Props) {
     <div
       ref={containerRef}
       // タイルが届くまでの下地。読み込み中に白く光らないよう地図の海と同じ色にする
-      className={cn('relative overflow-hidden bg-[#1c1c1e]', className)}
+      className={cn('relative overflow-hidden bg-muted', className)}
       aria-hidden
     >
       {size && size.width > 0 && size.height > 0 && (

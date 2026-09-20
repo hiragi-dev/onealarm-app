@@ -2,6 +2,7 @@ import * as React from 'react'
 import { match } from 'ts-pattern'
 import { ChevronDown, Power, RotateCcw, Wrench } from 'lucide-react'
 
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
@@ -67,10 +68,12 @@ export function DemoPanel() {
           open ? 'border-warning/50 bg-warning/5' : 'border-muted-foreground/30 bg-transparent',
         )}
       >
-        <CollapsibleTrigger className="flex w-full items-center gap-2 rounded-xl px-6 py-4 text-left focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none">
+        <CollapsibleTrigger className="flex w-full items-center gap-2 rounded-3xl px-6 py-4 text-left focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none">
           <Wrench className="size-4 shrink-0 text-warning" />
-          <span className="text-sm font-semibold text-warning">開発ツール</span>
-          <span className="ml-auto text-xs text-muted-foreground">dev ビルド専用</span>
+          <span className="text-sm font-extrabold text-warning">開発ツール</span>
+          <Badge variant="warning" className="ml-auto">
+            dev ビルド専用
+          </Badge>
           <ChevronDown
             className={cn(
               'size-4 shrink-0 text-muted-foreground transition-transform',
@@ -122,7 +125,7 @@ export function DemoPanel() {
                 </Select>
               </div>
 
-              <Label className="flex items-center justify-between gap-3 font-normal">
+              <Label className="flex items-center justify-between gap-3">
                 <span className="min-w-0">
                   <span className="block text-sm">エッジが応答する</span>
                   <span className="block text-xs text-muted-foreground">
@@ -168,9 +171,10 @@ export function DemoPanel() {
                 <Label>アラームを鳴らす</Label>
                 {match({ isRinging, alarms })
                   .with({ isRinging: true }, () => (
-                    <p className="text-xs text-muted-foreground">
-                      鳴動中です。「停止」タブから停止地点への到達で止められます。
-                    </p>
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                      <Badge variant="destructive">鳴動中</Badge>
+                      停止地点への到達で止められます。
+                    </div>
                   ))
                   .with({ alarms: [] }, () => (
                     <p className="text-xs text-muted-foreground">アラームが登録されていません。</p>
@@ -202,10 +206,12 @@ export function DemoPanel() {
             </div>
 
             {/* 3. 送った結果を見る */}
-            <DevGroupHeading trailing={log.length > 0 ? `${log.length}件` : undefined}>
+            <DevGroupHeading trailing={match(log.length)
+              .with(0, () => undefined)
+              .otherwise((n) => `${n}件`)}>
               ログ
             </DevGroupHeading>
-            <pre className="max-h-64 overflow-auto rounded-md border bg-background/40 p-2 font-mono text-[11px] leading-relaxed break-all whitespace-pre-wrap text-muted-foreground">
+            <pre className="max-h-64 overflow-auto rounded-2xl border bg-background/40 p-3 font-mono text-[11px] leading-relaxed font-normal break-all whitespace-pre-wrap text-muted-foreground">
               {match(log)
                 .with([], () => '（まだログはありません）')
                 .otherwise((entries) => entries.map((e) => `${e.time}  ${e.text}`).join('\n'))}
@@ -227,9 +233,9 @@ function DevGroupHeading({
 }) {
   return (
     <div className="flex items-center gap-2 pt-5 pb-2">
-      <span className="text-xs font-medium text-foreground">{children}</span>
+      <span className="text-xs text-foreground">{children}</span>
       <span className="h-px flex-1 bg-warning/20" />
-      {trailing && <span className="text-[11px] text-muted-foreground">{trailing}</span>}
+      {trailing && <Badge variant="neutral">{trailing}</Badge>}
     </div>
   )
 }

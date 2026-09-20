@@ -27,7 +27,7 @@ export function SwStatus() {
   }
 
   return (
-    <div className="bg-card fixed top-[calc(1rem+env(safe-area-inset-top))] right-4 z-50 flex items-center gap-3 rounded-lg border p-3 text-sm shadow-lg">
+    <div className="bg-card fixed top-[calc(1rem+env(safe-area-inset-top))] right-4 z-50 flex items-center gap-3 rounded-2xl border p-3 text-sm shadow-lg">
       <span>
         {match(needRefresh)
           .with(true, () => '新しいバージョンがあります')

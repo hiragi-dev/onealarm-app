@@ -45,7 +45,7 @@ export function WalkStatus() {
 
       <p
         className={cn(
-          'relative text-4xl font-bold tracking-tight transition-colors duration-500',
+          'relative text-4xl font-extrabold tracking-tight transition-colors duration-500',
           match(isWalking)
             .with(true, () => 'text-success')
             .with(false, () => 'text-muted-foreground/60')

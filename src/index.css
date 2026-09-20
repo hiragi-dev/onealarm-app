@@ -1,37 +1,52 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
 @import 'leaflet/dist/leaflet.css';
+/* 丸ゴシック体。文字も「丸っぽく・太く」揃えるため、システムフォント任せにせず同梱する。
+   iOS/macOS にはヒラギノ丸ゴがあるが Android には丸ゴシックが無く、端末で印象が変わるため。
+   使う太さは 700 と 800 の2つだけ。ここに無い太さを className で指定しても合成や
+   フォールバックになるだけなので、font-bold / font-extrabold 以外を使わない。 */
+@import '@fontsource/m-plus-rounded-1c/700.css';
+@import '@fontsource/m-plus-rounded-1c/800.css';
 
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* このアプリはダークテーマ専用。index.html の <html class="dark"> と揃えるため
-   :root と .dark に同じ値を置き、ライトテーマへのフォールバックは持たない。 */
+   :root と .dark に同じ値を置き、ライトテーマへのフォールバックは持たない。
+   キーカラーは青。状態色（success / warning / destructive）とは役割を分け、
+   青は「操作できる・選ばれている」を、状態色は「今どうなっているか」を示す。 */
 :root,
 .dark {
-  --radius: 0.625rem;
+  --radius: 1rem;
   --background: #000000;
-  --foreground: #f7ffe8;
-  --card: #111111;
-  --card-foreground: #f7ffe8;
-  --popover: #16161a;
-  --popover-foreground: #f7ffe8;
-  --primary: #d9ff4d;
-  --primary-foreground: #111111;
-  --secondary: #1c1c1e;
-  --secondary-foreground: #f7ffe8;
-  --muted: #1c1c1e;
-  --muted-foreground: #b7c7a5;
-  --accent: #26262a;
-  --accent-foreground: #f7ffe8;
-  --destructive: #ff5449;
+  --foreground: #eef2ff;
+  --card: #101218;
+  --card-foreground: #eef2ff;
+  --popover: #14171f;
+  --popover-foreground: #eef2ff;
+  --primary: #3a86ff;
+  --primary-foreground: #ffffff;
+  --secondary: #1a1e2a;
+  --secondary-foreground: #eef2ff;
+  --muted: #1a1e2a;
+  --muted-foreground: #9ba8c7;
+  --accent: #232939;
+  --accent-foreground: #eef2ff;
+  --destructive: #ff5c6c;
   --destructive-foreground: #ffffff;
-  --success: #4ade80;
-  --success-foreground: #06240f;
-  --warning: #ffb400;
-  --warning-foreground: #241a00;
+  --success: #34d399;
+  --success-foreground: #05291a;
+  --warning: #ffb020;
+  --warning-foreground: #261a00;
   --border: oklch(1 0 0 / 12%);
   --input: oklch(1 0 0 / 18%);
-  --ring: #d9ff4d;
+  --ring: #3a86ff;
+}
+
+@theme {
+  /* --font-sans は Tailwind の既定本文フォント（--default-font-family）に使われる */
+  --font-sans:
+    'M PLUS Rounded 1c', ui-rounded, 'Hiragino Maru Gothic ProN', 'BIZ UDPGothic', system-ui,
+    sans-serif;
 }
 
 @theme inline {
@@ -77,6 +92,9 @@
 
   body {
     @apply bg-background text-foreground;
+    /* 本文からして太字にする。個々の要素で font-bold を付けて回るのではなく既定を 700 にし、
+       見出しなど更に強めたい所だけ font-extrabold（800）を足す */
+    font-weight: 700;
     /* PWA（standalone）でセーフエリアを尊重する */
     padding-top: env(safe-area-inset-top);
     padding-bottom: env(safe-area-inset-bottom);
@@ -92,7 +110,7 @@
 
   /* Leaflet はダークテーマ用のスタイルを持たないため、必要な部分だけ上書きする */
   .leaflet-container {
-    background: #1c1c1e;
+    background: var(--muted);
     font: inherit;
   }
 
@@ -106,14 +124,18 @@
     color: var(--primary);
   }
 
+  .leaflet-bar {
+    border-radius: 9999px;
+  }
+
   .leaflet-bar a {
-    background: #16161a;
-    color: #f7ffe8;
+    background: var(--popover);
+    color: var(--foreground);
     border-bottom-color: rgba(255, 255, 255, 0.12);
   }
 
   .leaflet-bar a:hover {
-    background: #26262a;
-    color: #f7ffe8;
+    background: var(--accent);
+    color: var(--foreground);
   }
 }

@@ -1,10 +1,11 @@
 import * as React from 'react'
 import { match, P } from 'ts-pattern'
-import { AlarmClockOff, CloudOff, Plus } from 'lucide-react'
+import { AlarmClockOff, CloudOff, MapPin, Nfc, Plus } from 'lucide-react'
 
 import { AddAlarmWizard } from '@/components/alarm/add-alarm-wizard'
 import { EditAlarmPage } from '@/components/alarm/edit-alarm-page'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -85,17 +86,6 @@ function AlarmRow({
     .with({ stopMethodId: null }, () => '停止方法が未設定のため切り替えできません')
     .otherwise(() => null)
 
-  const summary = [
-    formatDaysOfWeek(alarm.daysOfWeek),
-    match(stopMethod)
-      .with(P.nullish, () => '停止方法未設定')
-      .otherwise((m) => m.label),
-    ...match(alarm.isNfcEnabled)
-      .with(true, () => ['NFC'])
-      .with(false, () => [])
-      .exhaustive(),
-  ].join(' ・ ')
-
   return (
     <div
       role="button"
@@ -114,10 +104,31 @@ function AlarmRow({
       )}
     >
       <div className="min-w-0 flex-1">
-        <p className="text-5xl leading-tight font-extralight tracking-tight tabular-nums">
+        <p className="text-5xl leading-none font-extrabold tracking-tight tabular-nums">
           {formatAlarmTime(alarm.time)}
         </p>
-        <p className="mt-1 truncate text-sm text-muted-foreground">{summary}</p>
+        <p className="mt-2 truncate text-sm text-muted-foreground">
+          {formatDaysOfWeek(alarm.daysOfWeek)}
+        </p>
+        {/* 停止方法と NFC は「このアラームがどう止まるか」の状態なので、
+            曜日と同じ文に混ぜずチップで分けて出す。停止方法が無いのは
+            鳴っても止められないということなので warning にする */}
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {match(stopMethod)
+            .with(P.nullish, () => <Badge variant="warning">停止方法未設定</Badge>)
+            .otherwise((m) => (
+              <Badge variant="info">
+                <MapPin />
+                <span className="truncate">{m.label}</span>
+              </Badge>
+            ))}
+          {alarm.isNfcEnabled && (
+            <Badge variant="success">
+              <Nfc />
+              NFC
+            </Badge>
+          )}
+        </div>
       </div>
       {/* 応答待ちの間はスイッチをスピナーに置き換える（幅を固定して行のガタつきを防ぐ） */}
       <div
@@ -151,14 +162,14 @@ function ConnectionOverlay({
 }) {
   return (
     <div className="absolute -inset-4 z-10 flex items-center justify-center rounded-3xl bg-black/50 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-[rgba(30,30,30,0.85)] px-4 py-8 text-center shadow-2xl backdrop-blur-xl">
+      <div className="w-full max-w-sm rounded-3xl border border-white/10 bg-[rgba(20,23,31,0.85)] px-4 py-8 text-center shadow-2xl backdrop-blur-xl">
         {match(broker.kind)
           .with('connecting', () => (
             <>
               <div className="mb-4 inline-flex rounded-full bg-white/6 p-4">
                 <Spinner className="size-8 text-primary" />
               </div>
-              <h2 className="mb-1 text-lg font-bold">再接続しています…</h2>
+              <h2 className="mb-1 text-lg font-extrabold">再接続しています…</h2>
               <p className="text-sm text-muted-foreground">
                 デバイスへ自動で接続を試みています。しばらくお待ちください。
               </p>
@@ -169,7 +180,7 @@ function ConnectionOverlay({
               <div className="mb-4 inline-flex rounded-full bg-destructive/10 p-4 text-destructive">
                 <CloudOff className="size-8" />
               </div>
-              <h2 className="mb-1 text-lg font-bold text-destructive">未接続・エラー</h2>
+              <h2 className="mb-1 text-lg font-extrabold text-destructive">未接続・エラー</h2>
               <p className="mb-4 text-sm text-muted-foreground">
                 アラームを操作するには、デバイスとの接続が必要です。以下の問題を確認してください。
               </p>
@@ -239,7 +250,7 @@ export function AlarmControl() {
   return (
     <div className="relative flex h-full flex-col">
       <div className="flex items-center justify-between pb-2">
-        <h1 className="text-3xl font-bold">アラーム</h1>
+        <h1 className="text-3xl font-extrabold tracking-tight">アラーム</h1>
         <Button
           variant="ghost"
           size="icon-lg"

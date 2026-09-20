@@ -46,7 +46,21 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        // フォント（woff2）は precache に含めない。同梱している丸ゴシック体は 1 ウェイトが
+        // 約 3MB・127 分割で、全部を初回インストール時に取り込むと重すぎる。
+        // 実際に表示した文字ぶんの分割だけが要求されるので、下の runtimeCaching で
+        // 取りに行ったものだけを溜める
+        globPatterns: ['**/*.{js,css,html,svg,png}'],
+        runtimeCaching: [
+          {
+            urlPattern: /\.woff2?$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'fonts',
+              expiration: { maxEntries: 256, maxAgeSeconds: 60 * 60 * 24 * 365 },
+            },
+          },
+        ],
         cleanupOutdatedCaches: true,
         clientsClaim: true,
         // SPA fallback so deep links work offline.

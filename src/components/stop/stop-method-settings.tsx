@@ -1,10 +1,11 @@
 import { match } from 'ts-pattern'
-import { MapPin, Plus, Trash2 } from 'lucide-react'
+import { AlarmClock, MapPin, Plus, Trash2 } from 'lucide-react'
 
 import { InfoPopover } from '@/components/common/info-popover'
 import { StaticMapPreview } from '@/components/map/static-map-preview'
 import { StopMethodDialogs } from '@/components/stop/stop-method-dialogs'
 import { useStopMethodEditing } from '@/components/stop/use-stop-method-editing'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { formatAlarmTime } from '@/lib/alarm'
 
@@ -33,7 +34,7 @@ export function StopMethodSettings() {
         <div className="flex items-center gap-1">
           {/* 見出しに「（位置情報）」のような但し書きを足さない。
               説明は情報ボタンへ寄せ、見出しは名前だけにしておく */}
-          <h2 className="text-lg font-semibold">停止方法</h2>
+          <h2 className="text-lg font-extrabold tracking-tight">停止方法</h2>
           <InfoPopover>
             アラームを止めるために移動する地点です。地図上の地点と、到達とみなす半径で決めます。
             「アラーム」タブでアラームごとに1つ割り当て、鳴っている間にその地点まで移動すると
@@ -70,7 +71,7 @@ export function StopMethodSettings() {
                     <StaticMapPreview
                       point={row.method}
                       radiusMeters={row.method.radiusMeters}
-                      className="size-20 rounded-lg border border-white/8"
+                      className="size-20 rounded-2xl border border-white/8"
                     />
                   </button>
 
@@ -79,18 +80,22 @@ export function StopMethodSettings() {
                     onClick={() => editing.openView(row.method.id)}
                     className="min-w-0 flex-1 text-left outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
                   >
-                    <span className="block truncate font-medium">{row.method.label}</span>
+                    <span className="block truncate">{row.method.label}</span>
                     <span className="mt-0.5 block truncate text-xs text-muted-foreground">
                       到達判定 半径{row.method.radiusMeters}m
                     </span>
-                    {/* 「使用中」バッジではなく時刻を出す。消してよいかを判断するには
-                        使われている事実よりどのアラームかが要る */}
-                    <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+                    {/* 「使用中」の1チップではなく、使っているアラームの時刻を1つずつチップにする。
+                        消してよいかを判断するには、使われている事実よりどのアラームかが要る */}
+                    <span className="mt-1.5 flex flex-wrap gap-1">
                       {match(row.usedBy)
-                        .with([], () => 'どのアラームにも未設定')
-                        .otherwise(
-                          (usedBy) =>
-                            `${usedBy.map((a) => formatAlarmTime(a.time)).join('・')} のアラームで使用中`,
+                        .with([], () => <Badge variant="neutral">未使用</Badge>)
+                        .otherwise((usedBy) =>
+                          usedBy.map((a) => (
+                            <Badge key={a.id} variant="info">
+                              <AlarmClock />
+                              {formatAlarmTime(a.time)}
+                            </Badge>
+                          )),
                         )}
                     </span>
                   </button>

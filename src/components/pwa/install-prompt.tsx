@@ -17,10 +17,10 @@ export function InstallPrompt() {
   if (!shouldSuggest) return null
 
   return (
-    <div className="bg-card fixed inset-x-0 bottom-0 z-50 border-t p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-lg">
+    <div className="bg-card fixed inset-x-0 bottom-0 z-50 rounded-t-3xl border-t p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-lg">
       <div className="mx-auto flex max-w-md items-start gap-3">
         <div className="min-w-0 flex-1 space-y-2">
-          <p className="text-sm font-medium">ホーム画面に追加してください</p>
+          <p className="text-sm font-extrabold">ホーム画面に追加してください</p>
           <p className="text-muted-foreground text-xs leading-relaxed">
             ブラウザのままだと、しばらく使わない間にアラームの設定が消えることがあります。
             追加後はデータが引き継がれないため、設定を作る前の追加をおすすめします。

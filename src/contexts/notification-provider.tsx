@@ -59,7 +59,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
           <div
             role="status"
             className={cn(
-              'pointer-events-auto flex w-full max-w-sm items-center gap-3 rounded-xl border px-4 py-3 text-sm shadow-2xl backdrop-blur-lg animate-in fade-in-0 slide-in-from-bottom-2',
+              'pointer-events-auto flex w-full max-w-sm items-center gap-3 rounded-3xl border px-4 py-3 text-sm shadow-2xl backdrop-blur-lg animate-in fade-in-0 slide-in-from-bottom-2',
               style.className,
             )}
           >

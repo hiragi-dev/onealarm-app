@@ -17,15 +17,17 @@ export const stopPointIcon = L.icon({
   shadowSize: [41, 41],
 })
 
-// 現在地を表す青い丸ドット（停止地点のピンとは見た目を分ける）
+/** 停止地点の到達判定円・現在地との導線に使う色。index.css の --primary と同じ値 */
+export const MAP_ACCENT_COLOR = '#3a86ff'
+
+// 現在地を表す青い丸ドット（停止地点のピンとは見た目を分ける）。
+// Leaflet の divIcon は文字列の HTML なので Tailwind の色が使えず、値を直書きする
 export const currentLocationIcon = L.divIcon({
   className: '',
   html:
-    '<div style="width:16px;height:16px;border-radius:50%;background:#4285F4;' +
-    'border:2px solid #fff;box-shadow:0 0 0 2px rgba(66,133,244,0.35);"></div>',
+    `<div style="width:16px;height:16px;border-radius:50%;background:${MAP_ACCENT_COLOR};` +
+    'border:2px solid #fff;box-shadow:0 0 0 2px rgba(58,134,255,0.35);"></div>',
   iconSize: [16, 16],
   iconAnchor: [8, 8],
 })
 
-/** 停止地点の到達判定円・現在地との導線に使う色 */
-export const MAP_ACCENT_COLOR = '#4285F4'

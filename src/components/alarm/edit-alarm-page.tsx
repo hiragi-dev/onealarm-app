@@ -136,10 +136,10 @@ export function EditAlarmPage({
           >
             <ArrowLeft className="size-4" />
           </Button>
-          <p className="flex-1 text-center text-base font-bold">アラームを編集</p>
+          <p className="flex-1 text-center text-base font-extrabold">アラームを編集</p>
           <Button
             variant="ghost"
-            className="px-3 font-bold text-primary hover:bg-transparent hover:text-primary"
+            className="px-3 font-extrabold text-primary hover:bg-transparent hover:text-primary"
             disabled={inputsDisabled}
             onClick={() => void handleSave()}
           >
@@ -163,12 +163,12 @@ export function EditAlarmPage({
               onChange={(e) => setTimeInput(e.target.value)}
               disabled={inputsDisabled}
               aria-label="時刻"
-              className="mx-auto h-auto w-auto justify-center border-0 bg-transparent py-1 text-center text-6xl font-extralight tracking-wider tabular-nums focus-visible:ring-0 md:text-6xl [&::-webkit-calendar-picker-indicator]:hidden"
+              className="mx-auto h-auto w-auto justify-center border-0 bg-transparent py-1 text-center text-6xl font-extrabold tracking-tight tabular-nums focus-visible:ring-0 md:text-6xl [&::-webkit-calendar-picker-indicator]:hidden"
             />
             <p className="text-sm text-muted-foreground">{formatDaysOfWeek(selectedDays)}</p>
           </div>
 
-          <div className="mt-5 rounded-2xl border border-white/8 bg-white/4 p-4">
+          <div className="mt-5 rounded-3xl border border-white/8 bg-white/4 p-4">
             <p className="mb-2 text-[0.7rem] tracking-[0.08em] text-muted-foreground uppercase">
               繰り返す曜日
             </p>
@@ -179,7 +179,7 @@ export function EditAlarmPage({
             />
           </div>
 
-          <div className="mt-3 rounded-2xl border border-white/8 bg-white/4 p-4">
+          <div className="mt-3 rounded-3xl border border-white/8 bg-white/4 p-4">
             <div className="mb-2 flex items-center gap-1">
               <p className="text-[0.7rem] tracking-[0.08em] text-muted-foreground uppercase">
                 停止方法（必須）
@@ -201,7 +201,7 @@ export function EditAlarmPage({
               .otherwise((methods) => (
                 <>
                   {selectedMethod && (
-                    <div className="pointer-events-none mb-3 h-28 overflow-hidden rounded-xl [&_.leaflet-control-zoom]:hidden">
+                    <div className="pointer-events-none mb-3 h-28 overflow-hidden rounded-2xl [&_.leaflet-control-zoom]:hidden">
                       <LocationPickerMap
                         initialCenter={selectedMethod}
                         value={selectedMethod}
@@ -231,10 +231,10 @@ export function EditAlarmPage({
               ))}
           </div>
 
-          <div className="mt-3 rounded-2xl border border-white/8 bg-white/4 p-4">
+          <div className="mt-3 rounded-3xl border border-white/8 bg-white/4 p-4">
             <div className="flex items-center gap-3">
               <div className="min-w-0 flex-1">
-                <p className="font-medium">NFC認証</p>
+                <p>NFC認証</p>
                 <p className="mt-0.5 text-xs text-muted-foreground">
                   到着後にNFCタグへのタッチも必要にします
                 </p>
@@ -247,10 +247,10 @@ export function EditAlarmPage({
             </div>
           </div>
 
-          <div className="mt-6 rounded-2xl border border-destructive/25 bg-destructive/6 p-4">
+          <div className="mt-6 rounded-3xl border border-destructive/25 bg-destructive/6 p-4">
             <Button
               variant="ghost"
-              className="w-full justify-start px-0 font-bold text-destructive hover:bg-transparent hover:text-destructive"
+              className="w-full justify-start px-0 font-extrabold text-destructive hover:bg-transparent hover:text-destructive"
               disabled={saving || isRinging}
               onClick={() => void handleDelete()}
             >
@@ -266,7 +266,7 @@ export function EditAlarmPage({
       {saving && (
         <div className="fixed inset-0 z-60 flex flex-col items-center justify-center gap-3 bg-black/70 backdrop-blur-sm">
           <Spinner className="size-8 text-primary" />
-          <p className="font-bold">
+          <p className="font-extrabold">
             {match(savingOp)
               .with('delete', () => '削除しています…')
               .otherwise(() => '保存しています…')}
