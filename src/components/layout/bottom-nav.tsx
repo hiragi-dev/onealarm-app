@@ -1,34 +1,41 @@
 import { Link } from '@tanstack/react-router'
-import { AlarmClock, CircleStop, Settings } from 'lucide-react'
+import { AlarmClock, CircleStop, Settings, type LucideIcon } from 'lucide-react'
 
-const items = [
-  { to: '/settings', label: '設定', icon: Settings, exact: false },
-  { to: '/', label: 'アラーム', icon: AlarmClock, exact: true },
-  { to: '/stop', label: '停止', icon: CircleStop, exact: false },
-] as const
+import { TABS, type TabPath } from '@/lib/tabs'
+
+/** 並び順と文言は lib/tabs.ts が持つ（画面遷移の向きと揃えるため）。ここはアイコンだけ足す */
+const icons: Record<TabPath, LucideIcon> = {
+  '/settings': Settings,
+  '/': AlarmClock,
+  '/stop': CircleStop,
+}
 
 /** 画面下部に固定される3タブのナビゲーション。 */
 export function BottomNav() {
   return (
-    <nav className="sticky bottom-0 z-30 px-4 pb-6">
+    // タブ切り替えの View Transition でページ部分だけを動かし、ナビは据え置くための名前
+    <nav className="sticky bottom-0 z-30 px-4 pb-6 [view-transition-name:bottom-nav]">
       <div className="mx-auto max-w-md overflow-hidden rounded-full border border-white/8 bg-[rgba(16,18,24,0.85)] shadow-[0_12px_40px_rgba(0,0,0,0.6)] backdrop-blur-xl">
         <ul className="flex h-17">
-          {items.map(({ to, label, icon: Icon, exact }) => (
-            <li key={to} className="flex-1">
-              <Link
-                to={to}
-                activeOptions={{ exact }}
-                className="group flex h-full flex-col items-center justify-center gap-0.5 text-[0.7rem] font-bold text-muted-foreground transition-colors [&.active]:text-primary"
-              >
-                {/* 選択中は文字色だけでなくアイコンの後ろに青い錠剤を敷く。
-                    青が「選ばれている」の意味だと、ここで最初に覚えてもらう */}
-                <span className="flex h-7 w-12 items-center justify-center rounded-full transition-colors group-[.active]:bg-primary/15">
-                  <Icon className="size-5.5" />
-                </span>
-                {label}
-              </Link>
-            </li>
-          ))}
+          {TABS.map(({ to, label, exact }) => {
+            const Icon = icons[to]
+            return (
+              <li key={to} className="flex-1">
+                <Link
+                  to={to}
+                  activeOptions={{ exact }}
+                  className="group flex h-full flex-col items-center justify-center gap-0.5 text-[0.7rem] font-bold text-muted-foreground transition-colors [&.active]:text-primary"
+                >
+                  {/* 選択中は文字色だけでなくアイコンの後ろに青い錠剤を敷く。
+                      青が「選ばれている」の意味だと、ここで最初に覚えてもらう */}
+                  <span className="flex h-7 w-12 items-center justify-center rounded-full transition-colors group-[.active]:bg-primary/15">
+                    <Icon className="size-5.5" />
+                  </span>
+                  {label}
+                </Link>
+              </li>
+            )
+          })}
         </ul>
       </div>
     </nav>

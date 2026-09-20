@@ -41,7 +41,8 @@ function RootLayout() {
         <RingingTakeover />
 
         <div className="flex h-full flex-col overflow-hidden">
-          <main className="min-h-0 flex-1 overflow-hidden">
+          {/* タブ切り替えの View Transition で動かすのはここだけ。下部ナビは据え置く */}
+          <main className="min-h-0 flex-1 overflow-hidden [view-transition-name:page]">
             <div className="mx-auto flex h-full max-w-md flex-col px-4 pt-6 pb-2">
               <Outlet />
             </div>

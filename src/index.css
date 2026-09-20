@@ -107,6 +107,74 @@
   }
 }
 
+/*
+ * タブ切り替えの画面遷移（View Transitions）。
+ * main.tsx が遷移の向きを forward / back の type で渡してくる。
+ * ルート全体を交差フェードさせるのではなく、ページ（main）だけを横に流し、
+ * 下部ナビ（bottom-nav）は据え置く。ネイティブアプリのタブ切り替えと同じ見え方。
+ */
+@keyframes page-in-from-right {
+  from {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+}
+@keyframes page-in-from-left {
+  from {
+    opacity: 0;
+    transform: translateX(-28px);
+  }
+}
+@keyframes page-out-to-left {
+  to {
+    opacity: 0;
+    transform: translateX(-28px);
+  }
+}
+@keyframes page-out-to-right {
+  to {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+}
+
+@layer base {
+  /* ルート（背景・通知など）は動かさない。既定の交差フェードも切る */
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
+  }
+
+  ::view-transition-old(page),
+  ::view-transition-new(page) {
+    animation-duration: 260ms;
+    animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
+    /* 既定の plus-lighter は重なった瞬間に白く光るので、横に流すときは普通に重ねる */
+    mix-blend-mode: normal;
+  }
+
+  html:active-view-transition-type(forward)::view-transition-old(page) {
+    animation-name: page-out-to-left;
+  }
+  html:active-view-transition-type(forward)::view-transition-new(page) {
+    animation-name: page-in-from-right;
+  }
+  html:active-view-transition-type(back)::view-transition-old(page) {
+    animation-name: page-out-to-right;
+  }
+  html:active-view-transition-type(back)::view-transition-new(page) {
+    animation-name: page-in-from-left;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    ::view-transition-group(*),
+    ::view-transition-old(*),
+    ::view-transition-new(*) {
+      animation: none !important;
+    }
+  }
+}
+
 @layer components {
 
   /* Leaflet はダークテーマ用のスタイルを持たないため、必要な部分だけ上書きする */

@@ -1,5 +1,6 @@
 import * as React from 'react'
 import { Dialog as DialogPrimitive } from 'radix-ui'
+import { match } from 'ts-pattern'
 import { X } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
@@ -36,27 +37,50 @@ function DialogOverlay({
   )
 }
 
+/**
+ * 全画面ダイアログの出方。ネイティブアプリの2つの型に合わせる。
+ * - sheet: 下から上がってくる。閉じるボタンが右上にある「一時的な作業」（追加・地点選び）
+ * - push: 右から入ってくる。戻る矢印が左上にある「一段深い画面」（編集）
+ * 全画面でないダイアログは中央で拡大するだけ（従来どおり）。
+ */
+export type FullScreenMotion = 'sheet' | 'push'
+
 function DialogContent({
   className,
   children,
   showCloseButton = true,
   fullScreen = false,
+  motion = 'sheet',
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean
   /** 地図など画面いっぱいに使いたいダイアログ向け。角丸・余白を持たない全画面表示にする。 */
   fullScreen?: boolean
+  /** fullScreen のときの出方。省略時はシート */
+  motion?: FullScreenMotion
 }) {
+  // 全画面は 100% ぶん滑らせるので、フェードを重ねると動いている間だけ半透明になって
+  // 軽く見える。滑るだけにし、フェードは中央ダイアログにだけ付ける
+  const motionClass = match({ fullScreen, motion })
+    .with({ fullScreen: false }, () =>
+      'top-1/2 left-1/2 w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 gap-4 rounded-3xl p-6 duration-200 data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95',
+    )
+    .with({ fullScreen: true, motion: 'sheet' }, () =>
+      'inset-0 h-full w-full duration-300 ease-out data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom',
+    )
+    .with({ fullScreen: true, motion: 'push' }, () =>
+      'inset-0 h-full w-full duration-300 ease-out data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right',
+    )
+    .exhaustive()
+
   return (
     <DialogPortal>
       <DialogOverlay />
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          'fixed z-50 flex flex-col border border-border bg-popover text-popover-foreground shadow-2xl duration-200 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0',
-          fullScreen
-            ? 'inset-0 h-full w-full data-[state=closed]:slide-out-to-bottom-4 data-[state=open]:slide-in-from-bottom-4'
-            : 'top-1/2 left-1/2 w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 gap-4 rounded-3xl p-6 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
+          'fixed z-50 flex flex-col border border-border bg-popover text-popover-foreground shadow-2xl data-[state=closed]:animate-out data-[state=open]:animate-in motion-reduce:animate-none',
+          motionClass,
           className,
         )}
         {...props}

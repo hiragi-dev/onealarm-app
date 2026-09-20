@@ -130,7 +130,8 @@ export function EditAlarmPage({
 
   return (
     <Dialog open={alarm !== null} onOpenChange={(next) => !next && !saving && onClose()}>
-      <DialogContent fullScreen showCloseButton={false} className="gap-0 p-0">
+      {/* 左上に戻る矢印を持つ「一段深い画面」なので、シートではなく右から押し込む */}
+      <DialogContent fullScreen motion="push" showCloseButton={false} className="gap-0 p-0">
         <DialogHeader className="sr-only">
           <DialogTitle>アラームを編集</DialogTitle>
         </DialogHeader>
