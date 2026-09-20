@@ -220,7 +220,8 @@ export function StopMethodNameDialog({
 }) {
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onCancel()}>
-      <DialogContent showCloseButton={false}>
+      {/* 名前の入力欄を持つので上に寄せる。中央だとスマホのキーボードに隠れる */}
+      <DialogContent showCloseButton={false} placement="top">
         <DialogHeader className="flex-row items-center gap-2 text-left">
           <Button variant="ghost" size="icon-sm" aria-label="地図に戻る" onClick={onBack}>
             <ArrowLeft />

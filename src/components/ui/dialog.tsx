@@ -45,12 +45,20 @@ function DialogOverlay({
  */
 export type FullScreenMotion = 'sheet' | 'push'
 
+/**
+ * 全画面でないダイアログの置き場所。
+ * - center: 画面中央。確認や短い選択
+ * - top: 画面上部。入力欄を持つものはこちら。中央だとスマホのキーボードに隠れる
+ */
+export type DialogPlacement = 'center' | 'top'
+
 function DialogContent({
   className,
   children,
   showCloseButton = true,
   fullScreen = false,
   motion = 'sheet',
+  placement = 'center',
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean
@@ -58,12 +66,17 @@ function DialogContent({
   fullScreen?: boolean
   /** fullScreen のときの出方。省略時はシート */
   motion?: FullScreenMotion
+  /** fullScreen でないときの置き場所。省略時は中央 */
+  placement?: DialogPlacement
 }) {
   // 全画面は 100% ぶん滑らせるので、フェードを重ねると動いている間だけ半透明になって
   // 軽く見える。滑るだけにし、フェードは中央ダイアログにだけ付ける
-  const motionClass = match({ fullScreen, motion })
-    .with({ fullScreen: false }, () =>
+  const motionClass = match({ fullScreen, motion, placement })
+    .with({ fullScreen: false, placement: 'center' }, () =>
       'top-1/2 left-1/2 w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 gap-4 rounded-3xl p-6 duration-200 data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95',
+    )
+    .with({ fullScreen: false, placement: 'top' }, () =>
+      'top-[calc(2rem+env(safe-area-inset-top))] left-1/2 w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 gap-4 rounded-3xl p-6 duration-200 data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95',
     )
     // 全画面は body の外（ポータル）に fixed で描かれ、body に付けたセーフエリアの余白が効かない。
     // ステータスバーの下に見出しが潜らないよう、自分で上端の余白を持つ。下端は各画面の
@@ -96,9 +109,11 @@ function DialogContent({
             data-slot="dialog-close"
             className={cn(
               'absolute right-4 rounded-full p-1.5 text-muted-foreground opacity-80 transition-opacity hover:opacity-100 focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none',
-              // 全画面は上端にセーフエリアの余白を持つが、absolute のこのボタンはそれを見ないので自分で足す
+              // 全画面は上端にセーフエリアの余白を持つが、absolute のこのボタンはそれを見ないので自分で足す。
+              // 縦位置は見出し（DialogHeader の py-3 + leading-none の文字）の中心に合わせる:
+              // 文字の中心 12px + 8px = 20px、ボタンは 28px 角なので上端は 6px
               match(fullScreen)
-                .with(true, () => 'top-[calc(1rem+env(safe-area-inset-top))]')
+                .with(true, () => 'top-[calc(0.375rem+env(safe-area-inset-top))]')
                 .with(false, () => 'top-4')
                 .exhaustive(),
             )}
