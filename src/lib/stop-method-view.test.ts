@@ -26,7 +26,6 @@ const alarm = (id: string, time: string, stopMethodId: string | null): Alarm => 
   daysOfWeek: ['Mon'],
   isEnabled: true,
   stopMethodId,
-  isNfcEnabled: false,
   walkUnlockPointId: null,
 })
 

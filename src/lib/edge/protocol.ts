@@ -24,7 +24,6 @@ export const AlarmInputSchema = Schema.Struct({
   daysOfWeek: Schema.mutable(Schema.Array(DayOfWeekSchema)),
   isEnabled: Schema.Boolean,
   stopMethodId: Schema.NullOr(Schema.String),
-  isNfcEnabled: Schema.Boolean,
   /**
    * 後から足した項目。この項目を知らないデバイスの state も読めるよう、
    * 欠けていれば null として扱う（デバイスは受け取った項目をそのまま持ち回るだけなので、

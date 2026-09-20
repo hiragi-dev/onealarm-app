@@ -19,7 +19,6 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Spinner } from '@/components/ui/spinner'
-import { Switch } from '@/components/ui/switch'
 import { useDemo } from '@/contexts/demo-context'
 import { useNotify } from '@/contexts/notification-context'
 import { useRunEffectState } from '@/lib/effect-react'
@@ -30,7 +29,7 @@ import { validateAlarmForm } from '@/lib/validation'
 type SavingOp = 'edit' | 'delete'
 
 /**
- * 既存アラームの編集。一覧から独立したフルページで、曜日・停止方法・NFCを
+ * 既存アラームの編集。一覧から独立したフルページで、曜日・停止方法・歩行検知の地点を
  * カード単位のセクションとして見せる。停止方法カードには実際の地図プレビューを
  * 埋め込み、「ここまで歩かないと止まらない」場所をその場で確認できるようにする。
  */
@@ -54,7 +53,6 @@ export function EditAlarmPage({
   const [timeInput, setTimeInput] = React.useState(defaultTimeValue())
   const [selectedDays, setSelectedDays] = React.useState<DayOfWeek[]>([])
   const [selectedStopMethodId, setSelectedStopMethodId] = React.useState('')
-  const [isNfcEnabled, setIsNfcEnabled] = React.useState(false)
   const [walkUnlockPointId, setWalkUnlockPointId] = React.useState<string | null>(null)
 
   // 開いたときの alarm の値で1度だけ初期化する（保存中に一覧側の値が変わっても
@@ -70,7 +68,6 @@ export function EditAlarmPage({
     setTimeInput(alarm.time)
     setSelectedDays(alarm.daysOfWeek)
     setSelectedStopMethodId(alarm.stopMethodId ?? '')
-    setIsNfcEnabled(alarm.isNfcEnabled)
     setWalkUnlockPointId(alarm.walkUnlockPointId)
   }, [alarm])
 
@@ -83,7 +80,6 @@ export function EditAlarmPage({
       time: timeInput,
       daysOfWeek: selectedDays,
       stopMethodId: selectedStopMethodId,
-      isNfcEnabled,
       walkUnlockPointId,
     }).pipe(
       Effect.flatMap((form) =>
@@ -91,7 +87,6 @@ export function EditAlarmPage({
           time: form.time,
           daysOfWeek: [...form.daysOfWeek],
           stopMethodId: form.stopMethodId,
-          isNfcEnabled: form.isNfcEnabled,
           walkUnlockPointId: form.walkUnlockPointId,
           isEnabled: alarm.isEnabled,
         }),
@@ -236,9 +231,6 @@ export function EditAlarmPage({
               ))}
           </div>
 
-          {/* NFC 認証と「歩行検知を有効にする地点」はどちらも歩行検知の解除経路で、
-              同時には持てない（validation.ts）。片方が有効な間はもう片方を触れなくして、
-              保存時に初めて弾かれる体験を避ける */}
           <div className="mt-3 rounded-3xl border border-white/8 bg-white/4 p-4">
             <div className="mb-2 flex items-center gap-1">
               <p className="text-[0.7rem] tracking-[0.08em] text-muted-foreground uppercase">
@@ -246,39 +238,15 @@ export function EditAlarmPage({
               </p>
               <InfoPopover>
                 鳴っている間、ここで選んだ地点に着くまで歩行検知が働きません（歩いても一時停止
-                しません）。着いてからは、停止方法の地点まで歩行検知が使えます。NFC認証とは
-                同時に使えません。
+                しません）。着いてからは、停止方法の地点まで歩行検知が使えます。
               </InfoPopover>
             </div>
             <WalkUnlockPointSelect
               value={walkUnlockPointId}
               onChange={setWalkUnlockPointId}
               stopMethods={stopMethods}
-              disabled={inputsDisabled || isNfcEnabled}
+              disabled={inputsDisabled}
             />
-            {isNfcEnabled && (
-              <p className="mt-2 text-xs text-muted-foreground">
-                NFC認証が有効な間は設定できません
-              </p>
-            )}
-          </div>
-
-          <div className="mt-3 rounded-3xl border border-white/8 bg-white/4 p-4">
-            <div className="flex items-center gap-3">
-              <div className="min-w-0 flex-1">
-                <p>NFC認証</p>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  {match(walkUnlockPointId)
-                    .with(null, () => '到着後にNFCタグへのタッチも必要にします')
-                    .otherwise(() => '歩行検知を有効にする地点を設定している間は使えません')}
-                </p>
-              </div>
-              <Switch
-                checked={isNfcEnabled}
-                onCheckedChange={(checked) => setIsNfcEnabled(checked === true)}
-                disabled={inputsDisabled || walkUnlockPointId !== null}
-              />
-            </div>
           </div>
 
           <div className="mt-6 rounded-3xl border border-destructive/25 bg-destructive/6 p-4">

@@ -33,7 +33,6 @@ const ALARM_INPUT: AlarmInput = {
   daysOfWeek: ['Mon', 'Tue'],
   isEnabled: true,
   stopMethodId: 'sm-office',
-  isNfcEnabled: false,
   walkUnlockPointId: null,
 }
 
@@ -43,7 +42,6 @@ const EXISTING_ALARM: Alarm = {
   daysOfWeek: ['Sat'],
   isEnabled: true,
   stopMethodId: 'sm-station',
-  isNfcEnabled: false,
   walkUnlockPointId: null,
 }
 

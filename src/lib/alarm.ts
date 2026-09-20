@@ -24,12 +24,10 @@ export type Alarm = {
   daysOfWeek: DayOfWeek[]
   isEnabled: boolean
   stopMethodId: string | null
-  isNfcEnabled: boolean
   /**
    * 到達すると歩行検知が有効になる地点（停止方法の ID）。null なら最初から有効。
-   * NFC 認証（isNfcEnabled）とは同時に使えない。NFC 認証は別アプリから手で実行できて
-   * しまい、歩行検知による一時停止の抜け道になっていたため、位置に紐づく経路を別に設けた。
-   * 排他は validation.ts の AlarmForm が守り、UI は片方が有効なら他方を触れなくする。
+   * 以前は NFC 認証が歩行検知の解除経路だったが、別アプリから手で実行できてしまい
+   * 抜け道になったため廃止し、位置に紐づくこの経路だけにした。
    */
   walkUnlockPointId: string | null
 }

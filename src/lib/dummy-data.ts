@@ -68,7 +68,6 @@ export const DUMMY_ALARMS: Alarm[] = [
     daysOfWeek: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
     isEnabled: true,
     stopMethodId: 'sm-office',
-    isNfcEnabled: true,
     walkUnlockPointId: null,
   },
   {
@@ -77,7 +76,6 @@ export const DUMMY_ALARMS: Alarm[] = [
     daysOfWeek: ['Sat', 'Sun'],
     isEnabled: false,
     stopMethodId: 'sm-convenience',
-    isNfcEnabled: false,
     walkUnlockPointId: null,
   },
   {
@@ -86,7 +84,6 @@ export const DUMMY_ALARMS: Alarm[] = [
     daysOfWeek: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
     isEnabled: true,
     stopMethodId: 'sm-station',
-    isNfcEnabled: false,
     // 「コンビニに着くまで歩行検知が働かない」見え方を確認するための1件
     walkUnlockPointId: 'sm-convenience',
   },

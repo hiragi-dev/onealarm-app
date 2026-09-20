@@ -27,7 +27,6 @@ const ALARM: Alarm = {
   daysOfWeek: ['Mon'],
   isEnabled: true,
   stopMethodId: 'sm-office',
-  isNfcEnabled: false,
   walkUnlockPointId: null,
 }
 

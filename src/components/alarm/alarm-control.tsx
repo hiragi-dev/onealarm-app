@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { match, P } from 'ts-pattern'
-import { AlarmClockOff, CloudOff, Footprints, MapPin, Nfc, Plus } from 'lucide-react'
+import { AlarmClockOff, CloudOff, Footprints, MapPin, Plus } from 'lucide-react'
 
 import { AddAlarmWizard } from '@/components/alarm/add-alarm-wizard'
 import { EditAlarmPage } from '@/components/alarm/edit-alarm-page'
@@ -113,7 +113,7 @@ function AlarmRow({
         <p className="mt-2 truncate text-sm text-muted-foreground">
           {formatDaysOfWeek(alarm.daysOfWeek)}
         </p>
-        {/* 停止方法と NFC は「このアラームがどう止まるか」の状態なので、
+        {/* 停止方法と歩行検知の地点は「このアラームがどう止まるか」の状態なので、
             曜日と同じ文に混ぜずチップで分けて出す。停止方法が無いのは
             鳴っても止められないということなので warning にする */}
         <div className="mt-2 flex flex-wrap gap-1.5">
@@ -125,13 +125,6 @@ function AlarmRow({
                 <span className="truncate">{m.label}</span>
               </Badge>
             ))}
-          {/* NFC と歩行検知の地点は排他なので、両方が同時に並ぶことはない */}
-          {alarm.isNfcEnabled && (
-            <Badge variant="success">
-              <Nfc />
-              NFC
-            </Badge>
-          )}
           {walkUnlockPoint && (
             <Badge variant="success">
               <Footprints />
@@ -247,7 +240,6 @@ export function AlarmControl() {
         daysOfWeek: alarm.daysOfWeek,
         isEnabled: !alarm.isEnabled,
         stopMethodId: alarm.stopMethodId,
-        isNfcEnabled: alarm.isNfcEnabled,
         walkUnlockPointId: alarm.walkUnlockPointId,
       }),
     )

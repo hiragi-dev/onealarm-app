@@ -7,7 +7,7 @@ import { deriveWalkGate } from '@/lib/walk-gate'
 /**
  * 「歩行検知を有効にする地点」の判断の検証。
  *
- * NFC 認証を手で実行して歩行検知の一時停止を得る抜け道を塞ぐための仕組みなので、
+ * 手で実行できる解除経路（かつての NFC 認証）の抜け道を塞ぐための仕組みなので、
  * 「着くまでは閉じている」「着いたら開く」「一度開いたら閉じ直さない」を固定する。
  */
 
@@ -26,7 +26,6 @@ const alarm = (walkUnlockPointId: string | null): Alarm => ({
   daysOfWeek: ['Mon'],
   isEnabled: true,
   stopMethodId: 'sm-office',
-  isNfcEnabled: false,
   walkUnlockPointId,
 })
 

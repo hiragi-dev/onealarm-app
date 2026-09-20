@@ -13,7 +13,6 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Spinner } from '@/components/ui/spinner'
-import { Switch } from '@/components/ui/switch'
 import { useDemo } from '@/contexts/demo-context'
 import { useNotify } from '@/contexts/notification-context'
 import { useRunEffect, useRunEffectState } from '@/lib/effect-react'
@@ -89,7 +88,6 @@ export function AddAlarmWizard({
     'Fri',
   ])
   const [selectedStopMethodId, setSelectedStopMethodId] = React.useState('')
-  const [isNfcEnabled, setIsNfcEnabled] = React.useState(false)
   const [walkUnlockPointId, setWalkUnlockPointId] = React.useState<string | null>(null)
 
   // 次に開いたときに前回の入力を持ち越さないよう、閉じる瞬間にリセットする
@@ -99,7 +97,6 @@ export function AddAlarmWizard({
     setTimeInput(defaultTimeValue())
     setSelectedDays(['Mon', 'Tue', 'Wed', 'Thu', 'Fri'])
     setSelectedStopMethodId('')
-    setIsNfcEnabled(false)
     setWalkUnlockPointId(null)
   }
 
@@ -125,7 +122,6 @@ export function AddAlarmWizard({
       time: timeInput,
       daysOfWeek: selectedDays,
       stopMethodId: selectedStopMethodId,
-      isNfcEnabled,
       walkUnlockPointId,
     }).pipe(
       Effect.flatMap((form) =>
@@ -133,7 +129,6 @@ export function AddAlarmWizard({
           time: form.time,
           daysOfWeek: [...form.daysOfWeek],
           stopMethodId: form.stopMethodId,
-          isNfcEnabled: form.isNfcEnabled,
           walkUnlockPointId: form.walkUnlockPointId,
           isEnabled: true,
         }),
@@ -314,8 +309,6 @@ export function AddAlarmWizard({
                       .otherwise((m) => `${m.label} ・ 半径${m.radiusMeters}m`)}
                     onEdit={() => setStep(2)}
                   />
-                  {/* NFC 認証とは同時に持てない（validation.ts）。片方が有効な間は
-                      もう片方を触れなくして、保存時に初めて弾かれる体験を避ける */}
                   <div className="py-3">
                     <div className="mb-2 flex items-center gap-1">
                       <p className="text-[0.68rem] tracking-[0.06em] text-muted-foreground uppercase">
@@ -323,35 +316,14 @@ export function AddAlarmWizard({
                       </p>
                       <InfoPopover>
                         鳴っている間、ここで選んだ地点に着くまで歩行検知が働きません。
-                        着いてからは、停止方法の地点まで歩行検知が使えます。NFC認証とは同時に使えません。
+                        着いてからは、停止方法の地点まで歩行検知が使えます。
                       </InfoPopover>
                     </div>
                     <WalkUnlockPointSelect
                       value={walkUnlockPointId}
                       onChange={setWalkUnlockPointId}
                       stopMethods={stopMethods}
-                      disabled={saving || isNfcEnabled}
-                    />
-                  </div>
-                  <div className="flex items-center gap-3 py-3">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[0.68rem] tracking-[0.06em] text-muted-foreground uppercase">
-                        NFC認証
-                      </p>
-                      <div className="mt-1">
-                        {match(isNfcEnabled)
-                          .with(true, () => <Badge variant="success">有効</Badge>)
-                          .with(false, () => <Badge variant="neutral">無効</Badge>)
-                          .exhaustive()}
-                      </div>
-                    </div>
-                    <Switch
-                      checked={isNfcEnabled}
-                      onCheckedChange={(checked) => setIsNfcEnabled(checked === true)}
-                      disabled={saving || walkUnlockPointId !== null}
-                      title={match(walkUnlockPointId)
-                        .with(null, () => undefined)
-                        .otherwise(() => '歩行検知を有効にする地点を設定している間は使えません')}
+                      disabled={saving}
                     />
                   </div>
                 </div>
