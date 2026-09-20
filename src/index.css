@@ -43,6 +43,17 @@
   --ring: #3a86ff;
 }
 
+/* 浮いている下部ナビが覆う高さ。錠剤（h-17）+ 下の余白（pb-6）+ セーフエリア。
+   スクロール領域の内側の余白（pb-nav）がこれを見る */
+:root {
+  --bottom-nav-space: calc(4.25rem + 1.5rem + env(safe-area-inset-bottom));
+}
+
+/* スクロール領域の下端の余白。浮いている下部ナビに最後の項目が隠れないようにする */
+@utility pb-nav {
+  padding-bottom: calc(var(--bottom-nav-space) + 1rem);
+}
+
 @theme {
   /* --font-sans は Tailwind の既定本文フォント（--default-font-family）に使われる */
   --font-sans:

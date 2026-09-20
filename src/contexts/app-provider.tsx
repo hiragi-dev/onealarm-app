@@ -190,6 +190,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const sessionBox = React.useRef<Session | null>(null)
 
+  /** セッションを畳む。畳むものがあったかを返す（無ければ切断のログを出さない） */
   const closeSession = React.useMemo(
     () =>
       Effect.gen(function* () {
@@ -198,9 +199,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           sessionBox.current = null
           return current
         })
-        if (!session) return
+        if (!session) return false
         yield* Scope.close(session.scope, Exit.void)
         yield* Effect.sync(() => setEdgeState(DISCONNECTED_STATE))
+        return true
       }),
     [],
   )
@@ -280,7 +282,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   )
 
   const disconnect = React.useMemo(
-    () => closeSession.pipe(Effect.zipRight(Effect.sync(() => appendLog('disconnected')))),
+    () =>
+      closeSession.pipe(
+        Effect.flatMap((closed) =>
+          closed ? Effect.sync(() => appendLog('disconnected')) : Effect.void,
+        ),
+      ),
     [appendLog, closeSession],
   )
 

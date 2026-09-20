@@ -18,7 +18,7 @@ export const Route = createFileRoute('/settings')({
  */
 function Settings() {
   return (
-    <div className="min-h-0 flex-1 space-y-6 overflow-y-auto pb-4">
+    <div className="min-h-0 flex-1 space-y-6 overflow-y-auto pb-nav">
       <h1 className="text-3xl font-extrabold tracking-tight">設定</h1>
 
       <ConnectionSettings />

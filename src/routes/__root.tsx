@@ -43,15 +43,17 @@ function RootLayout() {
         <RingingTakeover />
 
         <div className="flex h-full flex-col overflow-hidden">
-          {/* タブ切り替えの View Transition で動かすのはここだけ。下部ナビは据え置く */}
+          {/* タブ切り替えの View Transition で動かすのはここだけ。下部ナビは据え置く。
+              ナビは fixed で浮いているので、各タブのスクロール領域は画面の下端まで伸び、
+              内側の余白（pb-nav）でナビの下に内容が隠れないようにする */}
           <main className="min-h-0 flex-1 overflow-hidden [view-transition-name:page]">
-            <div className="mx-auto flex h-full max-w-md flex-col px-4 pt-6 pb-2">
+            <div className="mx-auto flex h-full max-w-md flex-col px-4 pt-6">
               <Outlet />
             </div>
           </main>
-
-          <BottomNav />
         </div>
+
+        <BottomNav />
 
         <SwStatus />
         <InstallPrompt />

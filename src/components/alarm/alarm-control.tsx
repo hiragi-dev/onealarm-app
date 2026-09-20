@@ -299,7 +299,7 @@ export function AlarmControl() {
 
       <Separator />
 
-      <div className="min-h-0 flex-1 overflow-y-auto pb-4">
+      <div className="min-h-0 flex-1 overflow-y-auto pb-nav">
         {match(listState)
           .with({ kind: 'loading' }, () => <AlarmListSkeleton />)
           .with({ kind: 'empty' }, () => <AlarmListEmpty canAdd={canAdd} />)

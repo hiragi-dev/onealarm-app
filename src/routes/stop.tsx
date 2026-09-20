@@ -16,7 +16,7 @@ export const Route = createFileRoute('/stop')({
 function Stop() {
   return (
     <div className="flex h-full flex-col">
-      <div className="min-h-0 flex-1 overflow-y-auto pb-4">
+      <div className="min-h-0 flex-1 overflow-y-auto pb-nav">
         <StopMethodSettings />
       </div>
     </div>
