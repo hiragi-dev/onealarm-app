@@ -22,6 +22,9 @@ function devHttps() {
 // https://vite.dev/config/
 export default defineConfig({
   server: { https: devHttps() },
+  // 本番ビルドの配信（npm run preview）も同じ証明書で HTTPS にする。
+  // 開発ツールを含まない状態でスマホから使うための経路
+  preview: { https: devHttps(), host: true, port: 4173 },
   plugins: [
     // tanstackRouter must run before the react plugin.
     tanstackRouter({
