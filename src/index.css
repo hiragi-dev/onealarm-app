@@ -110,8 +110,10 @@
 /*
  * タブ切り替えの画面遷移（View Transitions）。
  * main.tsx が遷移の向きを forward / back の type で渡してくる。
- * ルート全体を交差フェードさせるのではなく、ページ（main）だけを横に流し、
- * 下部ナビ（bottom-nav）は据え置く。ネイティブアプリのタブ切り替えと同じ見え方。
+ * ルート全体を交差フェードさせるのではなく、ページ（main）だけを横に流す。
+ * 下部ナビはルートに残したまま、ルートの交差フェードを切ることで据え置く
+ * （ナビに view-transition-name を付けると WebKit で backdrop-blur が効かなくなる）。
+ * ネイティブアプリのタブ切り替えと同じ見え方。
  */
 @keyframes page-in-from-right {
   from {
@@ -139,7 +141,7 @@
 }
 
 @layer base {
-  /* ルート（背景・通知など）は動かさない。既定の交差フェードも切る */
+  /* ルート（背景・下部ナビ・通知など）は動かさない。既定の交差フェードも切る */
   ::view-transition-old(root),
   ::view-transition-new(root) {
     animation: none;

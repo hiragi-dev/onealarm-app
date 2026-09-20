@@ -13,8 +13,11 @@ const icons: Record<TabPath, LucideIcon> = {
 /** 画面下部に固定される3タブのナビゲーション。 */
 export function BottomNav() {
   return (
-    // タブ切り替えの View Transition でページ部分だけを動かし、ナビは据え置くための名前
-    <nav className="sticky bottom-0 z-30 px-4 pb-6 [view-transition-name:bottom-nav]">
+    // タブ切り替えの View Transition では、動かすページ（main）側に名前を付け、ナビには付けない。
+    // 名前を付けると WebKit で独立した描画層になり、中の backdrop-blur が背後の画面を
+    // 拾えなくなって不透明に見える（iPhone で再現）。名前が無ければルートの一部として
+    // 据え置かれ、ルートの交差フェードは index.css で切ってあるので動きもしない
+    <nav className="sticky bottom-0 z-30 px-4 pb-6">
       <div className="mx-auto max-w-md overflow-hidden rounded-full border border-white/8 bg-[rgba(16,18,24,0.85)] shadow-[0_12px_40px_rgba(0,0,0,0.6)] backdrop-blur-xl">
         <ul className="flex h-17">
           {TABS.map(({ to, label, exact }) => {
