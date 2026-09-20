@@ -118,16 +118,11 @@ export function StopMethodSettings() {
               ))}
             </ul>
 
-            <div className="space-y-1">
-              <p className="text-xs text-muted-foreground/60">
-                行をタップすると地図で確認・編集できます
-              </p>
-              {/* プレビューはタイル画像を直に読んでいて Leaflet の出典表示が付かないので、
-                  ここで出す */}
-              <p className="text-[0.65rem] text-muted-foreground/40">
-                地図データ © OpenStreetMap contributors
-              </p>
-            </div>
+            {/* プレビューはタイル画像を直に読んでいて Leaflet の出典表示が付かないので、
+                ここで出す */}
+            <p className="text-[0.65rem] text-muted-foreground/40">
+              地図データ © OpenStreetMap contributors
+            </p>
           </>
         ))}
 
