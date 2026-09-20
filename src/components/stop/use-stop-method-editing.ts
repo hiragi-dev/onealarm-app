@@ -2,7 +2,7 @@ import * as React from 'react'
 import { Effect, Option } from 'effect'
 import { match } from 'ts-pattern'
 
-import { useDemo } from '@/contexts/demo-context'
+import { useApp } from '@/contexts/app-context'
 import { useNotify } from '@/contexts/notification-context'
 import { useRunEffect } from '@/lib/effect-react'
 import type { GeoPoint } from '@/lib/geo'
@@ -40,7 +40,7 @@ export function useStopMethodEditing() {
     addStopMethod,
     updateStopMethod,
     deleteStopMethod,
-  } = useDemo()
+  } = useApp()
   const run = useRunEffect()
   const notify = useNotify()
 

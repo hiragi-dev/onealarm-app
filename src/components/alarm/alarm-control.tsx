@@ -11,7 +11,7 @@ import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Spinner } from '@/components/ui/spinner'
 import { Switch } from '@/components/ui/switch'
-import { useDemo } from '@/contexts/demo-context'
+import { useApp } from '@/contexts/app-context'
 import { useAppReadiness } from '@/hooks/use-app-readiness'
 import { useRunEffect } from '@/lib/effect-react'
 import { formatAlarmTime, formatDaysOfWeek, type Alarm } from '@/lib/alarm'
@@ -170,7 +170,7 @@ function ConnectionOverlay({
   broker: BrokerConnection
   reasons: BlockReason[]
 }) {
-  const { settings, edgeStatus, connect, reconnect } = useDemo()
+  const { settings, edgeStatus, connect, reconnect } = useApp()
   const run = useRunEffect()
   const configured = Boolean(settings.brokerUrl && settings.deviceId)
   const action = deriveConnectAction({ broker: broker.kind, edge: edgeStatus, configured })
@@ -238,7 +238,7 @@ function ConnectionOverlay({
  * useRunEffect が扱う。
  */
 export function AlarmControl() {
-  const { alarms, alarmsUpdatedAt, ringingStatus, editAlarm, stopMethods } = useDemo()
+  const { alarms, alarmsUpdatedAt, ringingStatus, editAlarm, stopMethods } = useApp()
   const { alarmManagement, broker } = useAppReadiness()
   const run = useRunEffect()
 

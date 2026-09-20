@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Spinner } from '@/components/ui/spinner'
-import { useDemo } from '@/contexts/demo-context'
+import { useApp } from '@/contexts/app-context'
 import { useNotify } from '@/contexts/notification-context'
 import { deriveConnectAction, deriveConnectionTones, type Tone } from '@/lib/connection-view'
 import { isEditIntent } from '@/lib/edit-intent'
@@ -23,7 +23,7 @@ import {
   toneBadgeClass,
 } from '@/components/settings/settings-shared'
 import type { MqttField } from '@/components/settings/settings-shared'
-import type { MqttSettings } from '@/contexts/demo-context'
+import type { MqttSettings } from '@/contexts/app-context'
 
 /**
  * 「設定」タブの接続設定。
@@ -40,9 +40,10 @@ import type { MqttSettings } from '@/contexts/demo-context'
  * 現在の状態とボタンが離れていると往復させることになるため。
  */
 export function ConnectionSettings() {
-  const { settings, updateSetting, status } = useDemo()
+  const { settings, updateSetting, status } = useApp()
 
-  const editable = status === 'disconnected'
+  // 失敗した後（error）も編集できる。接続先を直せないと失敗から抜け出せない
+  const editable = status === 'disconnected' || status === 'error'
 
   return (
     <div className="space-y-4">
@@ -78,7 +79,7 @@ export function ConnectionSettings() {
 
 /** 「アプリ → ブローカー → エッジデバイス」の経路図 */
 function NetworkDiagram() {
-  const { status, edgeStatus } = useDemo()
+  const { status, edgeStatus } = useApp()
   const tones = deriveConnectionTones({ broker: status, edge: edgeStatus })
 
   return (
@@ -265,7 +266,7 @@ function FieldGroup({
 
 /** 接続/切断 */
 function ConnectionActions() {
-  const { settings, status, edgeStatus, connect, reconnect, disconnect } = useDemo()
+  const { settings, status, edgeStatus, connect, reconnect, disconnect } = useApp()
   const run = useRunEffect()
 
   const configured = Boolean(settings.brokerUrl && settings.deviceId)
@@ -291,7 +292,11 @@ function ConnectionActions() {
           .with({ kind: 'reconnect' }, () => '再接続')
           .otherwise(() => '接続')}
       </Button>
-      <Button variant="outline" onClick={disconnect} disabled={status === 'disconnected'}>
+      <Button
+        variant="outline"
+        onClick={() => void run(disconnect)}
+        disabled={status === 'disconnected'}
+      >
         切断
       </Button>
     </div>

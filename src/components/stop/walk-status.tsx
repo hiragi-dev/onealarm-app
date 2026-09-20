@@ -2,7 +2,7 @@ import { match } from 'ts-pattern'
 import { Footprints, Lock, MapPin } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
-import { useDemo } from '@/contexts/demo-context'
+import { useApp } from '@/contexts/app-context'
 import { formatDistance } from '@/lib/geo'
 import { cn } from '@/lib/utils'
 import type { WalkGate } from '@/lib/walk-gate'
@@ -20,7 +20,7 @@ import type { WalkGate } from '@/lib/walk-gate'
  * 見えるので、錠のアイコンと「どこに着けば開くか」だけを出す。
  */
 export function WalkStatus({ gate }: { gate: WalkGate }) {
-  const { isWalking } = useDemo()
+  const { isWalking } = useApp()
 
   return match(gate)
     .with({ kind: 'locked' }, ({ point, distance }) => (

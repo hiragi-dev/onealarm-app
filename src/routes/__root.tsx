@@ -6,8 +6,9 @@ import { InstallPrompt } from '@/components/pwa/install-prompt'
 import { SwStatus } from '@/components/pwa/sw-status'
 import { ArrivalStopBridge } from '@/components/stop/arrival-stop-bridge'
 import { RingingTakeover } from '@/components/stop/ringing-takeover'
+import { WalkPauseBridge } from '@/components/stop/walk-pause-bridge'
 import { WalkUnlockBridge } from '@/components/stop/walk-unlock-bridge'
-import { DemoProvider } from '@/contexts/demo-provider'
+import { AppProvider } from '@/contexts/app-provider'
 import { NotificationProvider } from '@/contexts/notification-provider'
 
 export const Route = createRootRoute({
@@ -25,18 +26,20 @@ export const Route = createRootRoute({
 /**
  * 全画面共通のレイアウト。
  *
- * NotificationProvider を DemoProvider より外側に置いているのは、
+ * NotificationProvider を AppProvider より外側に置いているのは、
  * ストアの操作が失敗したときの通知（useRunEffect 経由）を
  * どのタブからでも同じ場所に出せるようにするため。
  */
 function RootLayout() {
   return (
     <NotificationProvider>
-      <DemoProvider>
+      <AppProvider>
         {/* 画面を持たない常駐処理: 停止地点への到達を監視して自動停止する */}
         <ArrivalStopBridge />
         {/* 同じく常駐処理: 「歩行検知を有効にする地点」への到達を監視して解除する */}
         <WalkUnlockBridge />
+        {/* 歩いている間、デバイスへ一時停止を送り続ける */}
+        <WalkPauseBridge />
         {/* 鳴動中だけアプリ全体を覆う停止画面 */}
         <RingingTakeover />
 
@@ -55,7 +58,7 @@ function RootLayout() {
         <InstallPrompt />
 
         {import.meta.env.DEV && <TanStackRouterDevtools position="bottom-right" />}
-      </DemoProvider>
+      </AppProvider>
     </NotificationProvider>
   )
 }

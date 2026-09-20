@@ -1,4 +1,4 @@
-import type { MqttSettings } from '@/contexts/demo-context'
+import type { MqttSettings } from '@/contexts/app-context'
 import type { BrokerStatus, EdgeDeviceStatus } from '@/lib/app-state'
 import type { Tone } from '@/lib/connection-view'
 
@@ -127,26 +127,15 @@ export const edgeFields: MqttField[] = [
   },
 ]
 
-/** デモ操作でブローカー状態を差し替えるための選択肢 */
-export const brokerStatusOptions: { value: BrokerStatus; label: string }[] = [
-  { value: 'connected', label: 'connected（接続済み）' },
-  { value: 'connecting', label: 'connecting（接続中）' },
-  { value: 'disconnected', label: 'disconnected（未接続）' },
-  { value: 'error', label: 'error（エラー）' },
-]
-
-/** デモ操作でエッジの生存状況を差し替えるための選択肢 */
-export const edgeStatusOptions: { value: EdgeDeviceStatus; label: string }[] = [
-  { value: 'online', label: 'online（オンライン）' },
-  { value: 'offline', label: 'offline（オフライン）' },
-  { value: 'unknown', label: 'unknown（確認中）' },
-]
-
 export const DEV_PANEL_NOTE =
-  'エッジデバイスにもブローカーにも接続していない、UI確認用のビルドです。ここから状態を切り替えて各画面の見え方を確認できます。'
+  'dev ビルド専用の操作です。デモのデバイスに繋ぐと、実機もブローカーも無しで各画面の見え方を確認できます。'
+
+export const DEMO_ENABLED_HELP = '本物の MQTT の代わりに、アプリ内の偽のデバイスへ繋ぎます'
+
+export const BROKER_REACHABLE_HELP = '切ると次の接続が失敗し、エラー時の見え方を確認できます'
 
 export const EDGE_RESPONSIVE_HELP =
-  '切ると反映確認が返らなくなり、タイムアウト時の通知を確認できます'
+  '切ると返事が返らなくなり、タイムアウト時の通知を確認できます'
 
 /**
  * 接続中に設定を編集しようとしたときに出す文言。

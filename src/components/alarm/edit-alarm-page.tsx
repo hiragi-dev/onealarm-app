@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Spinner } from '@/components/ui/spinner'
-import { useDemo } from '@/contexts/demo-context'
+import { useApp } from '@/contexts/app-context'
 import { useNotify } from '@/contexts/notification-context'
 import { useRunEffectState } from '@/lib/effect-react'
 import { errorMessage, errorSeverity, RingingLockedError } from '@/lib/errors'
@@ -46,7 +46,7 @@ export function EditAlarmPage({
   stopMethods: StopMethod[]
   onClose: () => void
 }) {
-  const { editAlarm, deleteAlarm } = useDemo()
+  const { editAlarm, deleteAlarm } = useApp()
   const notify = useNotify()
   const { run: runSave, pending: saving } = useRunEffectState()
   const [savingOp, setSavingOp] = React.useState<SavingOp | null>(null)

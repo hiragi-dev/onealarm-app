@@ -1,6 +1,6 @@
 import * as React from 'react'
 
-import { useDemo } from '@/contexts/demo-context'
+import { useApp } from '@/contexts/app-context'
 import { useNotify } from '@/contexts/notification-context'
 import { deriveWalkGate } from '@/lib/walk-gate'
 
@@ -21,7 +21,7 @@ export function WalkUnlockBridge() {
     setSimulatedPosition,
     walkUnlocked,
     unlockWalkDetection,
-  } = useDemo()
+  } = useApp()
   const notify = useNotify()
 
   const ringingIds = ringingStatus?.ringingIds ?? []

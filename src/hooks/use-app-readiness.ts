@@ -1,4 +1,4 @@
-import { useDemo } from '@/contexts/demo-context'
+import { useApp } from '@/contexts/app-context'
 import {
   brokerConnectionFromStatus,
   deriveAlarmManagementReadiness,
@@ -16,7 +16,7 @@ export type AppReadiness = {
  * 代数的データ型として導出する。保持している状態ではなく、都度計算する純粋な導出。
  */
 export function useAppReadiness(): AppReadiness {
-  const { status, edgeStatus } = useDemo()
+  const { status, edgeStatus } = useApp()
 
   const broker = brokerConnectionFromStatus(status)
   const alarmManagement = deriveAlarmManagementReadiness(broker, edgeStatus)

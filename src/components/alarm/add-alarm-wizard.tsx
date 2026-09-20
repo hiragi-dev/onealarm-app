@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Spinner } from '@/components/ui/spinner'
-import { useDemo } from '@/contexts/demo-context'
+import { useApp } from '@/contexts/app-context'
 import { useNotify } from '@/contexts/notification-context'
 import { useRunEffect, useRunEffectState } from '@/lib/effect-react'
 import {
@@ -67,7 +67,7 @@ export function AddAlarmWizard({
   onOpenChange: (open: boolean) => void
   stopMethods: StopMethod[]
 }) {
-  const { addAlarm, currentPosition, startWatching } = useDemo()
+  const { addAlarm, currentPosition, startWatching } = useApp()
   const notify = useNotify()
   const run = useRunEffect()
   const { run: runSave, pending: saving } = useRunEffectState()

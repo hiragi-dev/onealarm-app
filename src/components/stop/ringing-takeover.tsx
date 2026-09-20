@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Spinner } from '@/components/ui/spinner'
 import { WalkStatus } from '@/components/stop/walk-status'
-import { useDemo } from '@/contexts/demo-context'
+import { useApp } from '@/contexts/app-context'
 import { useAppReadiness } from '@/hooks/use-app-readiness'
 import { useRunEffect } from '@/lib/effect-react'
 import { blockReasonLabel } from '@/lib/app-state'
@@ -42,7 +42,7 @@ export function RingingTakeover() {
     isWalking,
     setWalking,
     walkUnlocked,
-  } = useDemo()
+  } = useApp()
   const { alarmManagement } = useAppReadiness()
   const run = useRunEffect()
 

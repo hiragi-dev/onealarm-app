@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { Option } from 'effect'
 
-import { useDemo } from '@/contexts/demo-context'
+import { useApp } from '@/contexts/app-context'
 import { useNotify } from '@/contexts/notification-context'
 import { useRunEffect } from '@/lib/effect-react'
 import { distanceMeters } from '@/lib/geo'
@@ -22,7 +22,7 @@ export function ArrivalStopBridge() {
     currentPosition,
     simulatedPosition,
     setSimulatedPosition,
-  } = useDemo()
+  } = useApp()
   const run = useRunEffect()
   const notify = useNotify()
 
