@@ -1,3 +1,4 @@
+import fs from 'node:fs'
 import path from 'node:path'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
@@ -5,8 +6,22 @@ import tailwindcss from '@tailwindcss/vite'
 import { tanstackRouter } from '@tanstack/router-plugin/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
+/**
+ * dev サーバーの HTTPS。certificates/ に自己署名証明書（scripts/renew-cert.sh）があれば使う。
+ * スマホ実機の位置情報・加速度センサーはセキュアコンテキストでしか動かないため、
+ * 同じ Wi-Fi のスマホから PC の IP で開くには HTTPS が要る。無ければ従来どおり HTTP
+ */
+function devHttps() {
+  const dir = path.resolve(import.meta.dirname, 'certificates')
+  const key = path.join(dir, 'localhost-key.pem')
+  const cert = path.join(dir, 'localhost.pem')
+  if (!fs.existsSync(key) || !fs.existsSync(cert)) return undefined
+  return { key: fs.readFileSync(key), cert: fs.readFileSync(cert) }
+}
+
 // https://vite.dev/config/
 export default defineConfig({
+  server: { https: devHttps() },
   plugins: [
     // tanstackRouter must run before the react plugin.
     tanstackRouter({

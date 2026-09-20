@@ -11,7 +11,8 @@
     "typecheck": "tsc -b --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "icons": "node scripts/generate-icons.mjs"
+    "icons": "node scripts/generate-icons.mjs",
+    "cert:renew": "bash scripts/renew-cert.sh"
   },
   "dependencies": {
     "@fontsource/m-plus-rounded-1c": "^5.3.0",

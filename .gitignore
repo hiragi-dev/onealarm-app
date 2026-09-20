@@ -24,6 +24,9 @@ pnpm-debug.log*
 logs
 *.log
 
+# dev サーバーを HTTPS にするための自己署名証明書（scripts/renew-cert.sh が作る）
+certificates
+
 # 手元だけで持つ作業メモ（公開リポジトリに出さない）
 DECISION.md
 TODO.md
