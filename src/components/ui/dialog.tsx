@@ -3,6 +3,7 @@ import { Dialog as DialogPrimitive } from 'radix-ui'
 import { match } from 'ts-pattern'
 import { X } from 'lucide-react'
 
+import { useVisualViewport } from '@/hooks/use-visual-viewport'
 import { cn } from '@/lib/utils'
 
 function Dialog(props: React.ComponentProps<typeof DialogPrimitive.Root>) {
@@ -45,12 +46,8 @@ function DialogOverlay({
  */
 export type FullScreenMotion = 'sheet' | 'push'
 
-/**
- * 全画面でないダイアログの置き場所。
- * - center: 画面中央。確認や短い選択
- * - top: 画面上部。入力欄を持つものはこちら。中央だとスマホのキーボードに隠れる
- */
-export type DialogPlacement = 'center' | 'top'
+/** 見えている範囲がこれ以上縮んでいたらキーボードが開いていると見なす */
+const KEYBOARD_THRESHOLD_PX = 150
 
 function DialogContent({
   className,
@@ -58,7 +55,7 @@ function DialogContent({
   showCloseButton = true,
   fullScreen = false,
   motion = 'sheet',
-  placement = 'center',
+  style,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean
@@ -66,17 +63,25 @@ function DialogContent({
   fullScreen?: boolean
   /** fullScreen のときの出方。省略時はシート */
   motion?: FullScreenMotion
-  /** fullScreen でないときの置き場所。省略時は中央 */
-  placement?: DialogPlacement
 }) {
+  /**
+   * 中央のダイアログは、スマホでキーボードが開くと見えている範囲だけが縮み、
+   * 画面の中央がキーボードの下に隠れる。縮んでいる間だけ、見えている範囲の中央へ
+   * 中心を移す。普段は CSS の top-1/2 のまま（最初から上に寄せると違和感が強い）
+   */
+  const viewport = useVisualViewport()
+  const keyboardOpen =
+    !fullScreen && viewport !== null && window.innerHeight - viewport.height > KEYBOARD_THRESHOLD_PX
+  const centerStyle = match(keyboardOpen)
+    .with(true, () => ({ top: (viewport?.offsetTop ?? 0) + (viewport?.height ?? 0) / 2 }))
+    .with(false, () => undefined)
+    .exhaustive()
+
   // 全画面は 100% ぶん滑らせるので、フェードを重ねると動いている間だけ半透明になって
   // 軽く見える。滑るだけにし、フェードは中央ダイアログにだけ付ける
-  const motionClass = match({ fullScreen, motion, placement })
-    .with({ fullScreen: false, placement: 'center' }, () =>
-      'top-1/2 left-1/2 w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 gap-4 rounded-3xl p-6 duration-200 data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95',
-    )
-    .with({ fullScreen: false, placement: 'top' }, () =>
-      'top-[calc(2rem+env(safe-area-inset-top))] left-1/2 w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 gap-4 rounded-3xl p-6 duration-200 data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95',
+  const motionClass = match({ fullScreen, motion })
+    .with({ fullScreen: false }, () =>
+      'top-1/2 left-1/2 w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 gap-4 rounded-3xl p-6 transition-[top] duration-200 data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95',
     )
     // 全画面は body の外（ポータル）に fixed で描かれ、body に付けたセーフエリアの余白が効かない。
     // ステータスバーの下に見出しが潜らないよう、自分で上端の余白を持つ。下端は各画面の
@@ -101,6 +106,7 @@ function DialogContent({
           motionClass,
           className,
         )}
+        style={{ ...centerStyle, ...style }}
         {...props}
       >
         {children}
