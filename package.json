@@ -34,7 +34,6 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@tailwindcss/vite": "^4.3.3",
-    "@tanstack/react-router-devtools": "^1.167.0",
     "@tanstack/router-plugin": "^1.168.23",
     "@types/leaflet": "^1.9.22",
     "@types/node": "^26.1.2",

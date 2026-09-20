@@ -1,5 +1,4 @@
 import { createRootRoute, Link, Outlet } from '@tanstack/react-router'
-import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
 
 import { BottomNav } from '@/components/layout/bottom-nav'
 import { InstallPrompt } from '@/components/pwa/install-prompt'
@@ -56,8 +55,6 @@ function RootLayout() {
 
         <SwStatus />
         <InstallPrompt />
-
-        {import.meta.env.DEV && <TanStackRouterDevtools position="bottom-right" />}
       </AppProvider>
     </NotificationProvider>
   )
