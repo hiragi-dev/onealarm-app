@@ -1,8 +1,7 @@
 import * as React from 'react'
 import { match } from 'ts-pattern'
-import { Cpu, Server, Smartphone } from 'lucide-react'
+import { Check, Cpu, LoaderCircle, Minus, Server, Smartphone, X } from 'lucide-react'
 
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -82,83 +81,78 @@ function NetworkDiagram() {
   const { status, edgeStatus } = useApp()
   const tones = deriveConnectionTones({ broker: status, edge: edgeStatus })
 
-  const edgeLabel = match(tones.edgeUnreachable)
-    .with(true, () => '—')
-    .with(false, () => edgeStatusMeta[edgeStatus].label)
-    .exhaustive()
-
   return (
-    // 3 行のグリッド。1 行目にアイコンと線、2 行目に線の状態チップ、3 行目にノード名。
-    // ノード名をアイコンの直下（チップと同じ高さ）に置くと、チップが太った分だけ
-    // 「ブローカー」の幅が削られて折り返す。行を分ければ横幅を取り合わない。
-    // ノードの列幅は固定（4rem）。可変にすると文字数差で線の長さが変わってしまう。
-    // 線の列は minmax(0,1fr) で、チップの幅より狭くなっても列を広げない（狭い画面で
-    // グリッドがカードからはみ出さないため）。チップは行が別なので、列からはみ出しても
-    // ノード名やアイコンとは重ならない
-    <div className="grid grid-cols-[4rem_minmax(0,1fr)_4rem_minmax(0,1fr)_4rem] items-center gap-y-1.5">
-      <NodeIcon icon={<Smartphone className="size-4" />} tone={tones.app} />
-      <LineBar tone={tones.brokerLink} animating={tones.brokerPending} />
-      <NodeIcon icon={<Server className="size-4" />} tone={tones.brokerLink} />
-      <LineBar tone={tones.edgeLink} animating={tones.edgePending} dimmed={tones.edgeUnreachable} />
-      <NodeIcon icon={<Cpu className="size-4" />} tone={tones.edgeLink} dimmed={tones.edgeUnreachable} />
-
-      <span />
-      <LineChip tone={tones.brokerLink} label={brokerStatusMeta[status].label} animating={tones.brokerPending} />
-      <span />
-      <LineChip tone={tones.edgeLink} label={edgeLabel} animating={tones.edgePending} dimmed={tones.edgeUnreachable} />
-      <span />
-
-      <NodeLabel label="アプリ" />
-      <span />
-      <NodeLabel label="ブローカー" />
-      <span />
-      <NodeLabel label="エッジ" dimmed={tones.edgeUnreachable} />
+    <div className="flex items-start">
+      <NetworkNode icon={<Smartphone className="size-4" />} label="アプリ" tone={tones.app} />
+      <NetworkLine
+        tone={tones.brokerLink}
+        pending={tones.brokerPending}
+        description={brokerStatusMeta[status].label}
+      />
+      <NetworkNode icon={<Server className="size-4" />} label="ブローカー" tone={tones.brokerLink} />
+      <NetworkLine
+        tone={tones.edgeLink}
+        pending={tones.edgePending}
+        description={match(tones.edgeUnreachable)
+          .with(true, () => '判定できません')
+          .with(false, () => edgeStatusMeta[edgeStatus].label)
+          .exhaustive()}
+        dimmed={tones.edgeUnreachable}
+      />
+      <NetworkNode
+        icon={<Cpu className="size-4" />}
+        label="エッジ"
+        tone={tones.edgeLink}
+        dimmed={tones.edgeUnreachable}
+      />
     </div>
   )
 }
 
-function NodeIcon({
+function NetworkNode({
   icon,
+  label,
   tone,
   dimmed = false,
 }: {
   icon: React.ReactNode
+  label: string
   tone: Tone
   dimmed?: boolean
 }) {
   return (
+    // w-16 で3ノードを同幅に固定する。そうしないと「ブローカー」と「エッジ」の
+    // 文字数差で線の長さが変わってしまう。名前は折り返さない（w-16 に 5 文字が収まる）
     <div
       className={cn(
-        'justify-self-center rounded-full p-2.5 transition-[background-color,opacity] duration-300',
-        toneBadgeClass[tone],
+        'flex w-16 flex-col items-center gap-1.5 transition-opacity',
         dimmed && 'opacity-30',
       )}
     >
-      {icon}
+      <div className={cn('rounded-full p-2.5 transition-colors duration-300', toneBadgeClass[tone])}>
+        {icon}
+      </div>
+      <span className="text-xs whitespace-nowrap text-muted-foreground">{label}</span>
     </div>
   )
 }
 
-function NodeLabel({ label, dimmed = false }: { label: string; dimmed?: boolean }) {
-  return (
-    <span
-      className={cn(
-        'justify-self-center text-xs whitespace-nowrap text-muted-foreground transition-opacity',
-        dimmed && 'opacity-30',
-      )}
-    >
-      {label}
-    </span>
-  )
-}
-
-function LineBar({
+/**
+ * ノード間の線。状態は線の色と、線の中央に乗せた小さな印で示す。
+ * 言葉（「接続済み」「オンライン」）をここに置くと幅を取ってノード名と競合するため、
+ * 印の形で伝える: 通っていれば✓、待っていれば回転、失敗は×、判定できなければ −。
+ * 色だけだと色弱の人に区別がつかないので、形も必ず変える。
+ * 言葉での説明は読み上げ（aria-label）に残す
+ */
+function NetworkLine({
   tone,
-  animating,
+  pending,
+  description,
   dimmed = false,
 }: {
   tone: Tone
-  animating: boolean
+  pending: boolean
+  description: string
   dimmed?: boolean
 }) {
   const lineClass = match(tone)
@@ -168,39 +162,43 @@ function LineBar({
     .with('neutral', () => 'bg-border')
     .exhaustive()
 
+  // 印は線の上に乗るので、線が透けないよう塗りつぶす（ノードの丸は薄い色のまま）
+  const markClass = match(tone)
+    .with('success', () => 'bg-success text-success-foreground')
+    .with('warning', () => 'bg-warning text-warning-foreground')
+    .with('destructive', () => 'bg-destructive text-destructive-foreground')
+    .with('neutral', () => 'bg-accent text-muted-foreground')
+    .exhaustive()
+
+  const mark = match({ tone, pending })
+    .with({ pending: true }, () => <LoaderCircle className="size-3 animate-spin" />)
+    .with({ tone: 'success' }, () => <Check className="size-3" />)
+    .with({ tone: 'destructive' }, () => <X className="size-3" />)
+    .otherwise(() => <Minus className="size-3" />)
+
   return (
-    <div className={cn('px-1 transition-opacity', dimmed && 'opacity-30')}>
+    // アイコンの高さ（p-2.5 + size-4 = 36px）の中央に線を通す
+    <div
+      className={cn('relative flex h-9 flex-1 items-center px-1 transition-opacity', dimmed && 'opacity-30')}
+      role="img"
+      aria-label={description}
+      title={description}
+    >
       <div
         className={cn(
           'h-0.5 w-full rounded-full transition-colors duration-300',
           lineClass,
-          animating && 'animate-pulse',
+          pending && 'animate-pulse',
         )}
       />
-    </div>
-  )
-}
-
-/**
- * 線の状態チップ。線の色と同じ tone で出す。線の色だけだと色弱の人に区別がつかず、
- * 文字だけだと線と結びつかないので両方に同じ色を乗せる
- */
-function LineChip({
-  tone,
-  label,
-  animating,
-  dimmed = false,
-}: {
-  tone: Tone
-  label: string
-  animating: boolean
-  dimmed?: boolean
-}) {
-  return (
-    <div className={cn('flex justify-center transition-opacity', dimmed && 'opacity-30')}>
-      <Badge variant={tone} className={cn(animating && 'animate-pulse')}>
-        {label}
-      </Badge>
+      <span
+        className={cn(
+          'absolute left-1/2 flex size-5 -translate-x-1/2 items-center justify-center rounded-full ring-2 ring-card transition-colors duration-300',
+          markClass,
+        )}
+      >
+        {mark}
+      </span>
     </div>
   )
 }
