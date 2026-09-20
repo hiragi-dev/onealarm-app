@@ -27,6 +27,7 @@ const alarm = (id: string, time: string, stopMethodId: string | null): Alarm => 
   isEnabled: true,
   stopMethodId,
   isNfcEnabled: false,
+  walkUnlockPointId: null,
 })
 
 describe('deriveStopMethodRows', () => {
@@ -49,6 +50,16 @@ describe('deriveStopMethodRows', () => {
     })
 
     expect(rows[0].inUse).toBe(false)
+  })
+
+  it('歩行検知を有効にする地点として使われていても使用中（消すと解除できなくなる）', () => {
+    const rows = deriveStopMethodRows({
+      stopMethods: [method('sm-a'), method('sm-b')],
+      alarms: [{ ...alarm('al-1', '06:30', 'sm-a'), walkUnlockPointId: 'sm-b' }],
+    })
+
+    expect(rows[1].usedBy.map((a) => a.id)).toEqual(['al-1'])
+    expect(rows[1].inUse).toBe(true)
   })
 
   it('無効なアラームでも使用中として扱う（有効にした途端に止められなくなるため）', () => {

@@ -14,6 +14,7 @@ import { useRunEffect } from '@/lib/effect-react'
 import { blockReasonLabel } from '@/lib/app-state'
 import { formatDistance } from '@/lib/geo'
 import { deriveRingingView, type RingingTarget } from '@/lib/ringing-view'
+import { deriveWalkGate } from '@/lib/walk-gate'
 
 /**
  * 鳴動中だけ画面全体（下部ナビも含む）を覆う停止画面。
@@ -40,6 +41,7 @@ export function RingingTakeover() {
     sendStopCommand,
     isWalking,
     setWalking,
+    walkUnlocked,
   } = useDemo()
   const { alarmManagement } = useAppReadiness()
   const run = useRunEffect()
@@ -49,6 +51,14 @@ export function RingingTakeover() {
   const position = simulatedPosition ?? currentPosition
 
   const view = deriveRingingView({ ringingStatus, alarms, stopMethods, position })
+
+  // 歩行検知を働かせてよいか。停止画面と同じく先頭の鳴動アラームだけを見る
+  const walkGate = deriveWalkGate({
+    alarm: alarms.find((a) => a.id === ringingStatus?.ringingIds[0]),
+    stopMethods,
+    position,
+    unlocked: walkUnlocked,
+  })
 
   return match(view)
     // 鳴っていなければ何も描かない。平常時はこの画面自体が存在しない
@@ -73,7 +83,7 @@ export function RingingTakeover() {
           )}
 
           {/* 歩行検知状況。鳴動中に一番大きく出す */}
-          <WalkStatus />
+          <WalkStatus gate={walkGate} />
 
           <StopTarget target={target} />
 
@@ -95,6 +105,17 @@ export function RingingTakeover() {
                       .with(false, () => '歩行中にする')
                       .exhaustive()}
                   </Button>
+                  {walkGate.kind === 'locked' && (
+                    <Button
+                      variant="outline"
+                      disabled={!!simulatedPosition}
+                      onClick={() =>
+                        setSimulatedPosition({ lat: walkGate.point.lat, lng: walkGate.point.lng })
+                      }
+                    >
+                      歩行検知の解除地点まで移動したことにする
+                    </Button>
+                  )}
                   {target.kind === 'with-method' && (
                     <Button
                       variant="outline"

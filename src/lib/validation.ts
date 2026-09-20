@@ -39,13 +39,37 @@ export const StopMethodId = Schema.String.pipe(
   Schema.brand('StopMethodId'),
 )
 
-/** アラームの追加・編集フォーム */
+/**
+ * アラームの追加・編集フォーム。
+ *
+ * 「歩行検知を有効にする地点」と NFC 認証はどちらも歩行検知の解除経路で、
+ * 両方あると緩いほう（手で実行できる NFC）が抜け道になるので同時には持てない。
+ * UI は片方が有効なら他方を触れなくしているが、守るべき決まりは Schema 側に置く。
+ */
 export const AlarmForm = Schema.Struct({
   time: TimeString,
   daysOfWeek: DaysOfWeek,
   stopMethodId: StopMethodId,
   isNfcEnabled: Schema.Boolean,
-})
+  walkUnlockPointId: Schema.NullOr(Schema.String),
+}).pipe(
+  Schema.filter((form) => {
+    if (form.isNfcEnabled && form.walkUnlockPointId !== null) {
+      return {
+        path: ['walkUnlockPointId'],
+        message: 'NFC認証と歩行検知を有効にする地点は同時に使えません',
+      }
+    }
+    // 停止地点に着けばアラーム自体が止まるので、同じ地点では意味を成さない
+    if (form.walkUnlockPointId === form.stopMethodId) {
+      return {
+        path: ['walkUnlockPointId'],
+        message: '歩行検知を有効にする地点は、停止方法と別の地点を選んでください',
+      }
+    }
+    return undefined
+  }),
+)
 export type AlarmForm = Schema.Schema.Type<typeof AlarmForm>
 
 /** 停止方法の名前。前後の空白は落としてから長さを見る */
@@ -105,6 +129,7 @@ export function validateAlarmForm(input: {
   daysOfWeek: readonly DayOfWeek[]
   stopMethodId: string
   isNfcEnabled: boolean
+  walkUnlockPointId: string | null
 }): Effect.Effect<AlarmForm, ValidationError> {
   return decode(AlarmForm, input)
 }

@@ -6,6 +6,7 @@ import { InstallPrompt } from '@/components/pwa/install-prompt'
 import { SwStatus } from '@/components/pwa/sw-status'
 import { ArrivalStopBridge } from '@/components/stop/arrival-stop-bridge'
 import { RingingTakeover } from '@/components/stop/ringing-takeover'
+import { WalkUnlockBridge } from '@/components/stop/walk-unlock-bridge'
 import { DemoProvider } from '@/contexts/demo-provider'
 import { NotificationProvider } from '@/contexts/notification-provider'
 
@@ -34,6 +35,8 @@ function RootLayout() {
       <DemoProvider>
         {/* 画面を持たない常駐処理: 停止地点への到達を監視して自動停止する */}
         <ArrivalStopBridge />
+        {/* 同じく常駐処理: 「歩行検知を有効にする地点」への到達を監視して解除する */}
+        <WalkUnlockBridge />
         {/* 鳴動中だけアプリ全体を覆う停止画面 */}
         <RingingTakeover />
 

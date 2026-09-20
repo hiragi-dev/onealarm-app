@@ -25,6 +25,12 @@ export const AlarmInputSchema = Schema.Struct({
   isEnabled: Schema.Boolean,
   stopMethodId: Schema.NullOr(Schema.String),
   isNfcEnabled: Schema.Boolean,
+  /**
+   * 後から足した項目。この項目を知らないデバイスの state も読めるよう、
+   * 欠けていれば null として扱う（デバイスは受け取った項目をそのまま持ち回るだけなので、
+   * 送る側が付けていれば state にも乗って返ってくる）
+   */
+  walkUnlockPointId: Schema.optionalWith(Schema.NullOr(Schema.String), { default: () => null }),
 })
 export type AlarmInput = Schema.Schema.Type<typeof AlarmInputSchema>
 

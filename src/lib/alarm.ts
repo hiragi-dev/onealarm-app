@@ -25,6 +25,21 @@ export type Alarm = {
   isEnabled: boolean
   stopMethodId: string | null
   isNfcEnabled: boolean
+  /**
+   * 到達すると歩行検知が有効になる地点（停止方法の ID）。null なら最初から有効。
+   * NFC 認証（isNfcEnabled）とは同時に使えない。NFC 認証は別アプリから手で実行できて
+   * しまい、歩行検知による一時停止の抜け道になっていたため、位置に紐づく経路を別に設けた。
+   * 排他は validation.ts の AlarmForm が守り、UI は片方が有効なら他方を触れなくする。
+   */
+  walkUnlockPointId: string | null
+}
+
+/**
+ * その停止方法をアラームが参照しているか。停止地点としてでも、歩行検知を有効にする
+ * 地点としてでも、参照されていれば消せない（消すと止める・解除する手段が無くなる）
+ */
+export function usesStopMethod(alarm: Alarm, stopMethodId: string): boolean {
+  return alarm.stopMethodId === stopMethodId || alarm.walkUnlockPointId === stopMethodId
 }
 
 export type RingingStatus = {

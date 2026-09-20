@@ -37,6 +37,7 @@ describe('コマンド', () => {
           isEnabled: true,
           stopMethodId: 'sm-1',
           isNfcEnabled: false,
+          walkUnlockPointId: null,
         },
       },
     }
@@ -65,6 +66,30 @@ describe('コマンド', () => {
 })
 
 describe('デバイスからの電文', () => {
+  it('walkUnlockPointId を知らない古いデバイスの state も null として読める', () => {
+    const payload = JSON.stringify({
+      kind: 'state',
+      state: {
+        alarms: [
+          {
+            id: 'alarm-1',
+            time: '07:00',
+            daysOfWeek: ['Fri'],
+            isEnabled: true,
+            stopMethodId: 'sm-1',
+            isNfcEnabled: false,
+          },
+        ],
+        ringing: { isRinging: false, ringingIds: [] },
+      },
+    })
+    const decoded = parseDeviceMessage(payload)
+    expect(Either.isRight(decoded)).toBe(true)
+    if (Either.isRight(decoded) && decoded.right.kind === 'state') {
+      expect(decoded.right.state.alarms[0].walkUnlockPointId).toBeNull()
+    }
+  })
+
   it('全状態を書いてそのまま読める', () => {
     const message: DeviceMessage = {
       kind: 'state',
@@ -77,6 +102,7 @@ describe('デバイスからの電文', () => {
             isEnabled: false,
             stopMethodId: null,
             isNfcEnabled: true,
+            walkUnlockPointId: 'sm-2',
           },
         ],
         ringing: { isRinging: true, ringingIds: ['alarm-1'] },

@@ -13,7 +13,7 @@ import {
   type MqttSettings,
   type WalkPermission,
 } from '@/contexts/demo-context'
-import { sortAlarmsByTime, type Alarm, type RingingStatus } from '@/lib/alarm'
+import { sortAlarmsByTime, usesStopMethod, type Alarm, type RingingStatus } from '@/lib/alarm'
 import type { BrokerStatus, EdgeDeviceStatus } from '@/lib/app-state'
 import {
   BrokerNotConnectedError,
@@ -100,6 +100,7 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
 
   const [walkPermission, setWalkPermission] = React.useState<WalkPermission>('granted')
   const [isWalking, setWalking] = React.useState(false)
+  const [walkUnlocked, setWalkUnlocked] = React.useState(false)
   const [stepCount, setStepCount] = React.useState(0)
   const [motion, setMotion] = React.useState<MotionValues | null>(null)
   const [lastEventAt, setLastEventAt] = React.useState<number | null>(null)
@@ -253,6 +254,7 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
     setStatus('disconnected')
     setEdgeStatus('unknown')
     setRingingStatus(null)
+    setWalkUnlocked(false)
     appendLog('disconnected')
   }, [appendLog])
 
@@ -317,6 +319,8 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
   const startRinging = React.useCallback(
     (alarmId: string) => {
       setRingingStatus({ isRinging: true, ringingIds: [alarmId] })
+      // 鳴動ごとに地点へ着き直す。前回の鳴動で開いた鍵を持ち越さない
+      setWalkUnlocked(false)
       appendLog(`recv ringing_status: {"is_ringing":true,"ringing_ids":["${alarmId}"]}`)
     },
     [appendLog],
@@ -337,6 +341,7 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
         yield* Effect.sleep(Duration.millis(EDGE_STOP_CONFIRM_MS))
         yield* Effect.sync(() => {
           setRingingStatus({ isRinging: false, ringingIds: [] })
+          setWalkUnlocked(false)
           appendLog('recv ringing_status: {"is_ringing":false,"ringing_ids":[]}')
         })
       }),
@@ -375,8 +380,8 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
         if (stateRef.current.ringingIds.length > 0) {
           return Effect.fail(new RingingLockedError({ operation: '停止方法を削除' }))
         }
-        // 使用中の停止方法を消すと、そのアラームが止められなくなる
-        const inUse = stateRef.current.alarms.some((a) => a.stopMethodId === id)
+        // 使用中の停止方法を消すと、そのアラームが止められなく（歩行検知を解除できなく）なる
+        const inUse = stateRef.current.alarms.some((a) => usesStopMethod(a, id))
         if (inUse) {
           return Effect.fail(
             new ValidationError({
@@ -389,6 +394,8 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
       }),
     [],
   )
+
+  const unlockWalkDetection = React.useCallback(() => setWalkUnlocked(true), [])
 
   const requestWalkPermission = React.useMemo(
     (): Effect.Effect<void, SensorPermissionError> =>
@@ -424,6 +431,7 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
     setStopMethods(DUMMY_STOP_METHODS)
     setWalkPermission('granted')
     setWalking(false)
+    setWalkUnlocked(false)
     setStepCount(0)
     setLocationPermission('granted')
     setWatching(true)
@@ -456,6 +464,8 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
     requestWalkPermission,
     isWalking,
     setWalking,
+    walkUnlocked,
+    unlockWalkDetection,
     stepCount,
     motion,
     lastEventAt,

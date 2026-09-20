@@ -88,6 +88,12 @@ export type DemoStore = {
   requestWalkPermission: Effect.Effect<void, SensorPermissionError>
   isWalking: boolean
   setWalking: (walking: boolean) => void
+  /**
+   * この鳴動で「歩行検知を有効にする地点」にもう着いたか。鳴動が始まると false に戻る。
+   * 判断そのものは lib/walk-gate.ts に置き、ここは着いた事実を覚えるだけ
+   */
+  walkUnlocked: boolean
+  unlockWalkDetection: () => void
   stepCount: number
   motion: MotionValues | null
   lastEventAt: number | null

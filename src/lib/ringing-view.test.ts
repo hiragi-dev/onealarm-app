@@ -28,6 +28,7 @@ const ALARM: Alarm = {
   isEnabled: true,
   stopMethodId: 'sm-office',
   isNfcEnabled: false,
+  walkUnlockPointId: null,
 }
 
 const ringing = (ids: string[]) => ({ isRinging: ids.length > 0, ringingIds: ids })

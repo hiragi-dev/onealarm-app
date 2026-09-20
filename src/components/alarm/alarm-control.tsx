@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { match, P } from 'ts-pattern'
-import { AlarmClockOff, CloudOff, MapPin, Nfc, Plus } from 'lucide-react'
+import { AlarmClockOff, CloudOff, Footprints, MapPin, Nfc, Plus } from 'lucide-react'
 
 import { AddAlarmWizard } from '@/components/alarm/add-alarm-wizard'
 import { EditAlarmPage } from '@/components/alarm/edit-alarm-page'
@@ -66,6 +66,7 @@ function AlarmListEmpty({ canAdd }: { canAdd: boolean }) {
 function AlarmRow({
   alarm,
   stopMethod,
+  walkUnlockPoint,
   ready,
   ringing,
   pending,
@@ -74,6 +75,8 @@ function AlarmRow({
 }: {
   alarm: Alarm
   stopMethod: StopMethod | undefined
+  /** 歩行検知を有効にする地点。未設定なら undefined */
+  walkUnlockPoint: StopMethod | undefined
   ready: boolean
   ringing: boolean
   pending: boolean
@@ -122,10 +125,17 @@ function AlarmRow({
                 <span className="truncate">{m.label}</span>
               </Badge>
             ))}
+          {/* NFC と歩行検知の地点は排他なので、両方が同時に並ぶことはない */}
           {alarm.isNfcEnabled && (
             <Badge variant="success">
               <Nfc />
               NFC
+            </Badge>
+          )}
+          {walkUnlockPoint && (
+            <Badge variant="success">
+              <Footprints />
+              <span className="truncate">{walkUnlockPoint.label}から歩行検知</span>
             </Badge>
           )}
         </div>
@@ -238,6 +248,7 @@ export function AlarmControl() {
         isEnabled: !alarm.isEnabled,
         stopMethodId: alarm.stopMethodId,
         isNfcEnabled: alarm.isNfcEnabled,
+        walkUnlockPointId: alarm.walkUnlockPointId,
       }),
     )
     setPendingToggles((prev) => {
@@ -281,6 +292,7 @@ export function AlarmControl() {
                   <AlarmRow
                     alarm={alarm}
                     stopMethod={stopMethods.find((m) => m.id === alarm.stopMethodId)}
+                    walkUnlockPoint={stopMethods.find((m) => m.id === alarm.walkUnlockPointId)}
                     ready={ready}
                     ringing={ringingIds.includes(alarm.id)}
                     pending={pendingToggles.has(alarm.id)}

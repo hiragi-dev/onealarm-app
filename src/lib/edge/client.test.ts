@@ -34,6 +34,7 @@ const ALARM_INPUT: AlarmInput = {
   isEnabled: true,
   stopMethodId: 'sm-office',
   isNfcEnabled: false,
+  walkUnlockPointId: null,
 }
 
 const EXISTING_ALARM: Alarm = {
@@ -43,6 +44,7 @@ const EXISTING_ALARM: Alarm = {
   isEnabled: true,
   stopMethodId: 'sm-station',
   isNfcEnabled: false,
+  walkUnlockPointId: null,
 }
 
 type Fixture = {
