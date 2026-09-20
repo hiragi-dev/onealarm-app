@@ -36,14 +36,16 @@ export function WalkStatus({
   const { isWalking } = useApp()
 
   return match({ permission, gate })
+    // 許可はふつう最初のタップで取れている（SensorPermissionBridge）。ここに来るのは
+    // まだ一度もタップしていないときだけなので、ボタンではなくタップを促す
     .with({ permission: 'prompt' }, () => (
       <Panel>
         <Footprints className="size-16 text-muted-foreground/35" />
         <p className="text-4xl font-extrabold tracking-tight text-muted-foreground/60">
           歩行検知
         </p>
-        <Button size="lg" onClick={onRequestPermission}>
-          許可
+        <Button variant="ghost" size="lg" onClick={onRequestPermission}>
+          タップして許可
         </Button>
       </Panel>
     ))

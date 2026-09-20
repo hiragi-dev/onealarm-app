@@ -1,5 +1,6 @@
 import { createRootRoute, Link, Outlet } from '@tanstack/react-router'
 
+import { SensorPermissionBridge } from '@/components/common/sensor-permission-bridge'
 import { BottomNav } from '@/components/layout/bottom-nav'
 import { InstallPrompt } from '@/components/pwa/install-prompt'
 import { SwStatus } from '@/components/pwa/sw-status'
@@ -40,6 +41,8 @@ function RootLayout() {
         <WalkUnlockBridge />
         {/* 歩いている間、デバイスへ一時停止を送り続ける */}
         <WalkPauseBridge />
+        {/* 位置情報は起動時に、歩行検知は最初のタップで許可を取る（ボタンを押させない） */}
+        <SensorPermissionBridge />
         {/* 鳴動中だけアプリ全体を覆う停止画面 */}
         <RingingTakeover />
 
