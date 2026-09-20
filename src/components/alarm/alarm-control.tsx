@@ -176,7 +176,9 @@ function ConnectionOverlay({
   const action = deriveConnectAction({ broker: broker.kind, edge: edgeStatus, configured })
 
   return (
-    <div className="absolute -inset-4 z-10 flex items-center justify-center rounded-3xl bg-black/50 p-4 backdrop-blur-sm">
+    // 一覧の領域は浮いている下部ナビの下まで伸びているので、ナビの高さぶん下を空けて
+    // 「見えている範囲」の中央にカードを置く
+    <div className="absolute -inset-4 z-10 flex items-center justify-center rounded-3xl bg-black/50 p-4 pb-[calc(var(--bottom-nav-space)+1rem)] backdrop-blur-sm">
       <div className="w-full max-w-sm rounded-3xl border border-white/10 bg-[rgba(20,23,31,0.85)] px-4 py-8 text-center shadow-2xl backdrop-blur-xl">
         {match(broker.kind)
           .with('connecting', () => (

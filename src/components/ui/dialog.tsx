@@ -67,12 +67,14 @@ function DialogContent({
     )
     // 全画面は body の外（ポータル）に fixed で描かれ、body に付けたセーフエリアの余白が効かない。
     // ステータスバーの下に見出しが潜らないよう、自分で上端の余白を持つ。下端は各画面の
-    // 最下段（フッター・ボタン列）が max(…, env(safe-area-inset-bottom)) で持つ
+    // 最下段（フッター・ボタン列）が max(…, env(safe-area-inset-bottom)) で持つ。
+    // 背景はアプリ本体と同じ黒にする。中央のダイアログ用の少し明るい色（popover）だと、
+    // 黒いステータスバーとの境目が帯に見える
     .with({ fullScreen: true, motion: 'sheet' }, () =>
-      'inset-0 h-full w-full pt-[env(safe-area-inset-top)] duration-300 ease-out data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom',
+      'inset-0 h-full w-full border-0 bg-background pt-[env(safe-area-inset-top)] duration-300 ease-out data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom',
     )
     .with({ fullScreen: true, motion: 'push' }, () =>
-      'inset-0 h-full w-full pt-[env(safe-area-inset-top)] duration-300 ease-out data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right',
+      'inset-0 h-full w-full border-0 bg-background pt-[env(safe-area-inset-top)] duration-300 ease-out data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right',
     )
     .exhaustive()
 
