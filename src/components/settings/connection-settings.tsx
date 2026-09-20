@@ -91,8 +91,11 @@ function NetworkDiagram() {
     // 3 行のグリッド。1 行目にアイコンと線、2 行目に線の状態チップ、3 行目にノード名。
     // ノード名をアイコンの直下（チップと同じ高さ）に置くと、チップが太った分だけ
     // 「ブローカー」の幅が削られて折り返す。行を分ければ横幅を取り合わない。
-    // ノードの列幅は固定（w-18）。可変にすると文字数差で線の長さが変わってしまう
-    <div className="grid grid-cols-[4.5rem_1fr_4.5rem_1fr_4.5rem] items-center gap-y-1.5">
+    // ノードの列幅は固定（4rem）。可変にすると文字数差で線の長さが変わってしまう。
+    // 線の列は minmax(0,1fr) で、チップの幅より狭くなっても列を広げない（狭い画面で
+    // グリッドがカードからはみ出さないため）。チップは行が別なので、列からはみ出しても
+    // ノード名やアイコンとは重ならない
+    <div className="grid grid-cols-[4rem_minmax(0,1fr)_4rem_minmax(0,1fr)_4rem] items-center gap-y-1.5">
       <NodeIcon icon={<Smartphone className="size-4" />} tone={tones.app} />
       <LineBar tone={tones.brokerLink} animating={tones.brokerPending} />
       <NodeIcon icon={<Server className="size-4" />} tone={tones.brokerLink} />
