@@ -9,12 +9,12 @@ import {
   type ConnectError,
   type CurrentPosition,
   type DemoControls,
-  type LocationPermission,
   type LogEntry,
-  type MotionValues,
   type MqttSettings,
-  type WalkPermission,
 } from '@/contexts/app-context'
+import { useNotify } from '@/contexts/notification-context'
+import { useGeolocation } from '@/hooks/use-geolocation'
+import { useMotionSensor } from '@/hooks/use-motion-sensor'
 import { usesStopMethod, type Alarm } from '@/lib/alarm'
 import { makeEdgeClient, type EdgeClient, type EdgeState } from '@/lib/edge/client'
 import type { FakeEdge } from '@/lib/edge/fake-edge'
@@ -22,10 +22,11 @@ import { makeMqttTransport } from '@/lib/edge/mqtt-transport'
 import type { EdgeTransport } from '@/lib/edge/transport'
 import {
   BrokerNotConnectedError,
-  LocationUnavailableError,
+  errorMessage,
+  errorSeverity,
   RingingLockedError,
-  SensorPermissionError,
   ValidationError,
+  type LocationUnavailableError,
 } from '@/lib/errors'
 import type { GeoPoint } from '@/lib/geo'
 import type { StopMethod, StopMethodInput } from '@/lib/stop-method'
@@ -55,11 +56,13 @@ import {
  * - 停止方法・位置情報・歩行検知といったブラウザ内だけの状態
  * を受け持つ。
  *
- * 位置情報と歩行検知はまだダミー（GPS は東京駅付近で揺れ、歩行は開発用ボタンで切り替える）。
- * 本物のセンサーへの載せ替えは別の作業。
+ * 位置情報は navigator.geolocation、歩行検知は DeviceMotionEvent（hooks/）から取る。
  *
  * dev では「デモのデバイスに繋ぐ」を入れると、MQTT の代わりに fake のデバイス
- * （lib/edge/fake-edge.ts）へ繋ぐ。fake の操作口は demo にまとめ、本番ビルドには残さない。
+ * （lib/edge/fake-edge.ts）へ繋ぎ、センサーもダミー（GPS は東京駅付近で揺れ、歩行は
+ * 開発用ボタンで切り替える）に差し替わる。開発機には加速度センサーが無く、ダミーの
+ * 停止地点は東京なので、本物のセンサーでは到達の流れを試せないため。
+ * fake の操作口は demo にまとめ、本番ビルドには残さない。
  */
 
 /** 返事を待つ上限。実機（ESP32）は TLS 越しで数秒かかることがある */
@@ -138,19 +141,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [brokerReachable, setBrokerReachable] = React.useState(true)
   const [edgeResponsive, setEdgeResponsive] = React.useState(true)
 
-  // --- ブラウザ内だけの状態（センサーはダミー）---
-  const [walkPermission, setWalkPermission] = React.useState<WalkPermission>('granted')
-  const [isWalking, setWalking] = React.useState(false)
-  const [walkUnlockedFor, setWalkUnlockedFor] = React.useState<string | null>(null)
-  const [stepCount, setStepCount] = React.useState(0)
-  const [motion, setMotion] = React.useState<MotionValues | null>(null)
-  const [lastEventAt, setLastEventAt] = React.useState<number | null>(null)
+  // --- センサー（本物）。デモの間は購読しない ---
+  const notify = useNotify()
+  const notifyLocationError = React.useCallback(
+    (error: LocationUnavailableError) => notify(errorSeverity(error), errorMessage(error)),
+    [notify],
+  )
+  const geo = useGeolocation({ enabled: !demoEnabled, onError: notifyLocationError })
+  const sensor = useMotionSensor({ enabled: !demoEnabled })
 
-  const [locationPermission, setLocationPermission] = React.useState<LocationPermission>('granted')
-  const [watching, setWatching] = React.useState(true)
-  const [currentPosition, setCurrentPosition] = React.useState<CurrentPosition | null>(
+  // --- センサー（デモのダミー）---
+  const [demoWalking, setDemoWalking] = React.useState(false)
+  const [demoStepCount, setDemoStepCount] = React.useState(0)
+  const [demoPosition, setDemoPosition] = React.useState<CurrentPosition | null>(
     DUMMY_CURRENT_POSITION,
   )
+
+  const [walkUnlockedFor, setWalkUnlockedFor] = React.useState<string | null>(null)
   const [simulatedPosition, setSimulatedPosition] = React.useState<GeoPoint | null>(null)
 
   /**
@@ -165,6 +172,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
    */
   const latest = React.useRef({
     settings,
+    broker: edgeState.broker,
     ringingIds: edgeState.ringing?.ringingIds ?? [],
     alarmIds: edgeState.alarms.map((a) => a.id),
     demoEnabled,
@@ -174,6 +182,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   React.useEffect(() => {
     latest.current = {
       settings,
+      broker: edgeState.broker,
       ringingIds: edgeState.ringing?.ringingIds ?? [],
       alarmIds: edgeState.alarms.map((a) => a.id),
       demoEnabled,
@@ -303,6 +312,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!import.meta.env.DEV) return
     void Effect.runPromise(demoEnabled ? connect.pipe(Effect.ignore) : disconnect)
   }, [demoEnabled, connect, disconnect])
+
+  /**
+   * バックグラウンドから戻ったら繋ぎ直す。iOS はバックグラウンド中に WebSocket を
+   * 止めることがあり、mqtt.js の自動再接続だけでは戻った直後にすぐ繋がらない。
+   * 一度でも繋いだ後（セッションがある）に限り、繋がっていなければ作り直す
+   */
+  React.useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return
+      if (!sessionBox.current || latest.current.broker === 'connected') return
+      appendLog('foreground: 繋ぎ直します')
+      void Effect.runPromise(connect.pipe(Effect.ignore))
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [appendLog, connect])
 
   const updateSetting = React.useCallback((key: keyof MqttSettings, value: string) => {
     setSettings((prev) => ({ ...prev, [key]: value }))
@@ -458,7 +483,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     [],
   )
 
-  // ================= 歩行検知（ダミー）=================
+  // ================= 歩行検知 =================
 
   // 鳴動の組が変わったら別の鳴動。前回の鳴動で開いた鍵を持ち越さない
   const ringingKey = (edgeState.ringing?.ringingIds ?? []).join(',')
@@ -467,39 +492,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setWalkUnlockedFor(latest.current.ringingIds.join(','))
   }, [])
 
-  // ダミーのセンサー値: 許可済みの間だけ動き続ける
+  // デモの歩行: 手で切り替えた「歩行中」の間だけ歩数が増える
   React.useEffect(() => {
-    if (walkPermission !== 'granted') return
-    const id = setInterval(() => {
-      const amplitude = isWalking ? 3.2 : 0.25
-      setMotion({
-        accelerationX: jitter(amplitude),
-        accelerationY: jitter(amplitude),
-        accelerationZ: jitter(amplitude),
-        accelerationGravityX: jitter(amplitude),
-        accelerationGravityY: jitter(amplitude) + 9.8,
-        accelerationGravityZ: jitter(amplitude),
-      })
-      setLastEventAt(Date.now())
-      if (isWalking) setStepCount((prev) => prev + 1)
-    }, 500)
+    if (!demoEnabled || !demoWalking) return
+    const id = setInterval(() => setDemoStepCount((prev) => prev + 1), 500)
     return () => clearInterval(id)
-  }, [walkPermission, isWalking])
+  }, [demoEnabled, demoWalking])
 
-  const requestWalkPermission = React.useMemo(
-    (): Effect.Effect<void, SensorPermissionError> =>
-      // ダミーでは常に許可される
-      Effect.sync(() => setWalkPermission('granted')),
-    [],
-  )
+  // ================= 位置情報 =================
 
-  // ================= 位置情報（ダミー）=================
-
-  // ダミーのGPS: 監視中はわずかに揺れる
+  // デモの GPS: 東京駅付近でわずかに揺れる
   React.useEffect(() => {
-    if (!watching || locationPermission !== 'granted') return
+    if (!demoEnabled) return
     const id = setInterval(() => {
-      setCurrentPosition((prev) =>
+      setDemoPosition((prev) =>
         prev
           ? {
               lat: prev.lat + jitter(0.00008),
@@ -510,22 +516,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       )
     }, 3000)
     return () => clearInterval(id)
-  }, [watching, locationPermission])
-
-  const startWatching = React.useMemo(
-    (): Effect.Effect<void, LocationUnavailableError> =>
-      Effect.suspend((): Effect.Effect<void, LocationUnavailableError> => {
-        if (locationPermission === 'granted' || locationPermission === 'prompt') {
-          return Effect.sync(() => {
-            setLocationPermission('granted')
-            setWatching(true)
-            setCurrentPosition((prev) => prev ?? DUMMY_CURRENT_POSITION)
-          })
-        }
-        return Effect.fail(new LocationUnavailableError({ reason: locationPermission }))
-      }),
-    [locationPermission],
-  )
+  }, [demoEnabled])
 
   // ================= dev 専用: fake のデバイスの操作 =================
 
@@ -554,14 +545,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         withFake((fake) =>
           fake.device.mutate((s) => ({ ...s, ringing: { isRinging: true, ringingIds: [alarmId] } })),
         ),
+      setWalking: setDemoWalking,
       reset: () => {
         // fake は次の接続で初期状態から作り直される。ブラウザ内の状態はここで戻す
         setStopMethods(DUMMY_STOP_METHODS)
         setWalkUnlockPoints({})
-        setWalking(false)
+        setDemoWalking(false)
         setWalkUnlockedFor(null)
-        setStepCount(0)
-        setCurrentPosition(DUMMY_CURRENT_POSITION)
+        setDemoStepCount(0)
+        setDemoPosition(DUMMY_CURRENT_POSITION)
         setSimulatedPosition(null)
         setLog([])
         void Effect.runPromise(
@@ -593,23 +585,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     addStopMethod,
     updateStopMethod,
     deleteStopMethod,
-    walkPermission,
-    requestWalkPermission,
-    isWalking,
-    setWalking,
+    // デモの間はセンサーの代わりにダミーを出す
+    walkPermission: demoEnabled ? 'granted' : sensor.permission,
+    requestWalkPermission: demoEnabled ? Effect.void : sensor.requestPermission,
+    isWalking: demoEnabled ? demoWalking : sensor.isWalking,
     walkUnlocked,
     unlockWalkDetection,
-    stepCount,
-    motion,
-    lastEventAt,
-    locationPermission,
-    watching,
-    startWatching,
-    currentPosition,
+    stepCount: demoEnabled ? demoStepCount : sensor.stepCount,
+    motion: demoEnabled ? null : sensor.motion,
+    lastEventAt: demoEnabled ? null : sensor.lastEventAt,
+    locationPermission: demoEnabled ? 'granted' : geo.permission,
+    watching: demoEnabled ? true : geo.watching,
+    startWatching: demoEnabled ? Effect.void : geo.startWatching,
+    currentPosition: demoEnabled ? demoPosition : geo.currentPosition,
     simulatedPosition,
     setSimulatedPosition,
-    setLocationPermission,
-    setWalkPermission,
     demo,
   }
 

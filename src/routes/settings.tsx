@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 
 import { ConnectionSettings } from '@/components/settings/connection-settings'
 import { DemoPanel } from '@/components/settings/demo-panel'
+import { SensorSettings } from '@/components/settings/sensor-settings'
 
 export const Route = createFileRoute('/settings')({
   component: Settings,
@@ -22,6 +23,8 @@ function Settings() {
       <h1 className="text-3xl font-extrabold tracking-tight">設定</h1>
 
       <ConnectionSettings />
+
+      <SensorSettings />
 
       {/* 本来は外から起きる状態を切り替える操作なので、本番ビルドには残さない。
           載せ替え後は実機へコマンドを送る口になり、鳴動を止める手段を増やしてしまう。 */}

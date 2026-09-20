@@ -1,4 +1,5 @@
-import { match } from 'ts-pattern'
+import * as React from 'react'
+import { match, P } from 'ts-pattern'
 import { BellRing, MapPin } from 'lucide-react'
 
 import { RingingMiniMap } from '@/components/map/ringing-mini-map'
@@ -8,10 +9,11 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Spinner } from '@/components/ui/spinner'
 import { WalkStatus } from '@/components/stop/walk-status'
-import { useApp } from '@/contexts/app-context'
+import { useApp, type LocationPermission } from '@/contexts/app-context'
 import { useAppReadiness } from '@/hooks/use-app-readiness'
 import { useRunEffect } from '@/lib/effect-react'
 import { blockReasonLabel } from '@/lib/app-state'
+import { errorMessage, LocationUnavailableError } from '@/lib/errors'
 import { formatDistance } from '@/lib/geo'
 import { deriveRingingView, type RingingTarget } from '@/lib/ringing-view'
 import { deriveWalkGate } from '@/lib/walk-gate'
@@ -40,11 +42,23 @@ export function RingingTakeover() {
     setSimulatedPosition,
     sendStopCommand,
     isWalking,
-    setWalking,
     walkUnlocked,
+    walkPermission,
+    requestWalkPermission,
+    locationPermission,
+    startWatching,
+    demo,
   } = useApp()
   const { alarmManagement } = useAppReadiness()
   const run = useRunEffect()
+
+  // 鳴り始めたら現在地の監視を始める。到達判定はこれが無いと働かない。
+  // 失敗（未対応・拒否）は useRunEffect が通知し、画面側でも理由を出す
+  const ringing = (ringingStatus?.ringingIds ?? []).length > 0
+  React.useEffect(() => {
+    if (!ringing) return
+    void run(startWatching)
+  }, [ringing, run, startWatching])
 
   // 疑似現在地が設定されていれば表示上の距離もそちらに合わせ、
   // ArrivalStopBridge の到達判定と食い違わないようにする
@@ -84,9 +98,13 @@ export function RingingTakeover() {
           )}
 
           {/* 歩行検知状況。鳴動中に一番大きく出す */}
-          <WalkStatus gate={walkGate} />
+          <WalkStatus
+            gate={walkGate}
+            permission={walkPermission}
+            onRequestPermission={() => void run(requestWalkPermission)}
+          />
 
-          <StopTarget target={target} />
+          <StopTarget target={target} locationPermission={locationPermission} />
 
           {/* 実際に停止地点まで移動せずに到達検知フローを試すためのデバッグ操作。
               疑似現在地は ArrivalStopBridge が停止を確認でき次第、自動的に解除する。 */}
@@ -100,7 +118,7 @@ export function RingingTakeover() {
                 <div className="flex flex-col items-start gap-2">
                   {/* 歩行検知は加速度センサー由来で、開発機を振らないと歩行中にならない。
                       この画面の主役である WalkStatus の見え方を確かめるために手で切り替える */}
-                  <Button variant="outline" onClick={() => setWalking(!isWalking)}>
+                  <Button variant="outline" onClick={() => demo.setWalking(!isWalking)}>
                     {match(isWalking)
                       .with(true, () => '静止中にする')
                       .with(false, () => '歩行中にする')
@@ -147,7 +165,13 @@ export function RingingTakeover() {
 }
 
 /** 停止方法の有無で分かれる中身。判別可能ユニオンを網羅描画する */
-function StopTarget({ target }: { target: RingingTarget }) {
+function StopTarget({
+  target,
+  locationPermission,
+}: {
+  target: RingingTarget
+  locationPermission: LocationPermission
+}) {
   return match(target)
     .with({ kind: 'with-method' }, (t) => (
       <Card>
@@ -159,17 +183,25 @@ function StopTarget({ target }: { target: RingingTarget }) {
             </Badge>
             まで
           </div>
-          {match(t.distanceToTarget)
+          {match({ distance: t.distanceToTarget, locationPermission })
+            // 位置情報が使えなければ、待っていても現在地は来ない。理由を出す
+            .with({ distance: null, locationPermission: P.union('denied', 'unsupported', 'insecure') }, ({ locationPermission: reason }) => (
+              <Alert variant="destructive">
+                <AlertDescription>
+                  {errorMessage(new LocationUnavailableError({ reason }))}
+                </AlertDescription>
+              </Alert>
+            ))
             // 初回測位には数秒かかることがあるため、待機中であることを明示する
-            .with(null, () => (
+            .with({ distance: null }, () => (
               <div className="flex items-center gap-2 py-1 text-sm text-muted-foreground">
                 <Spinner className="size-4" />
                 現在地を取得しています…
               </div>
             ))
-            .otherwise((meters) => (
+            .otherwise(({ distance }) => (
               <p className="text-3xl font-extrabold tracking-tight tabular-nums">
-                {formatDistance(meters)}
+                {formatDistance(distance)}
               </p>
             ))}
           {/* 残り距離の数字だけでは「どっちへ行けばいいか」が分からないため、

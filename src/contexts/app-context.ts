@@ -16,6 +16,8 @@ import type {
 import type { GeoPoint } from '@/lib/geo'
 import type { StopMethod, StopMethodInput } from '@/lib/stop-method'
 import type { MqttSettings } from '@/lib/storage'
+import type { CurrentPosition, LocationPermission } from '@/hooks/use-geolocation'
+import type { MotionValues, WalkPermission } from '@/hooks/use-motion-sensor'
 
 /**
  * アプリ状態の「かたち」と、それを読むためのフック。
@@ -28,23 +30,9 @@ import type { MqttSettings } from '@/lib/storage'
  * 失敗の文言と通知は useRunEffect に任せられる。
  */
 
-export type { MqttSettings }
+export type { CurrentPosition, LocationPermission, MotionValues, MqttSettings, WalkPermission }
 
 export type LogEntry = { time: string; text: string }
-
-export type LocationPermission = 'granted' | 'prompt' | 'denied' | 'unsupported' | 'insecure'
-export type WalkPermission = 'granted' | 'prompt' | 'denied'
-
-export type CurrentPosition = GeoPoint & { accuracy: number }
-
-export type MotionValues = {
-  accelerationX: number
-  accelerationY: number
-  accelerationZ: number
-  accelerationGravityX: number
-  accelerationGravityY: number
-  accelerationGravityZ: number
-}
 
 /** 接続が失敗しうる理由 */
 export type ConnectError = BrokerUnreachableError | EdgeTimeoutError
@@ -74,6 +62,8 @@ export type DemoControls = {
   dropConnection: () => void
   /** 時刻の到来を待たずに鳴らす */
   startRinging: (alarmId: string) => void
+  /** 歩行中かを手で切り替える（デモでは加速度センサーを使わない） */
+  setWalking: (walking: boolean) => void
   /** fake のデバイスと停止方法を初期状態に戻す */
   reset: () => void
 }
@@ -112,11 +102,11 @@ export type AppStore = {
   updateStopMethod: (id: string, input: StopMethodInput) => Effect.Effect<void, RingingLockedError>
   deleteStopMethod: (id: string) => Effect.Effect<void, ValidationError | RingingLockedError>
 
-  // --- 歩行検知 ---
+  // --- 歩行検知（加速度センサー）---
   walkPermission: WalkPermission
+  /** iOS は操作起点でしか許可を要求できないので、ボタンから呼ぶ */
   requestWalkPermission: Effect.Effect<void, SensorPermissionError>
   isWalking: boolean
-  setWalking: (walking: boolean) => void
   /**
    * この鳴動で「歩行検知を有効にする地点」にもう着いたか。鳴動が変わると false に戻る。
    * 判断そのものは lib/walk-gate.ts に置き、ここは着いた事実を覚えるだけ
@@ -130,13 +120,12 @@ export type AppStore = {
   // --- 位置情報 ---
   locationPermission: LocationPermission
   watching: boolean
+  /** 監視を始める。最初の測位は待たない（取れるまで currentPosition は null） */
   startWatching: Effect.Effect<void, LocationUnavailableError>
   currentPosition: CurrentPosition | null
   /** 到達検知フローを実際に移動せず試すための疑似現在地 */
   simulatedPosition: GeoPoint | null
   setSimulatedPosition: (point: GeoPoint | null) => void
-  setLocationPermission: (permission: LocationPermission) => void
-  setWalkPermission: (permission: WalkPermission) => void
 
   // --- dev 専用 ---
   demo: DemoControls
