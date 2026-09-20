@@ -139,8 +139,10 @@ function Tiles({
           loading="lazy"
           decoding="async"
           /* タイルの URL 自体が停止地点の座標なので、タイルサーバには位置が渡る。
-             せめてどのアプリの利用者かまでは紐づけさせない */
-          referrerPolicy="no-referrer"
+             参照元も渡したくないが、OSM のタイル利用ポリシーはブラウザからの要求に
+             Referer を求め、無いと「Blocked」画像を返す。折り合いとして
+             オリジン（どのアプリか）だけ渡し、パスは渡さない */
+          referrerPolicy="origin"
           // 明るい OSM タイルは黒い画面の中で浮くので、少しだけ落として馴染ませる
           className="pointer-events-none absolute max-w-none brightness-90 saturate-90"
           style={{ left: tile.left, top: tile.top }}
