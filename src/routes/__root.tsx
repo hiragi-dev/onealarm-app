@@ -3,6 +3,7 @@ import { createRootRoute, Link, Outlet } from '@tanstack/react-router'
 import { BottomNav } from '@/components/layout/bottom-nav'
 import { InstallPrompt } from '@/components/pwa/install-prompt'
 import { SwStatus } from '@/components/pwa/sw-status'
+import { ViewportGuard } from '@/components/pwa/viewport-guard'
 import { ArrivalStopBridge } from '@/components/stop/arrival-stop-bridge'
 import { RingingTakeover } from '@/components/stop/ringing-takeover'
 import { WalkPauseBridge } from '@/components/stop/walk-pause-bridge'
@@ -57,6 +58,8 @@ function RootLayout() {
 
         <SwStatus />
         <InstallPrompt />
+        {/* iOS でキーボードを閉じた後にページがずれたままになるのを戻す */}
+        <ViewportGuard />
       </AppProvider>
     </NotificationProvider>
   )

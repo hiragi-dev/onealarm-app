@@ -48,7 +48,7 @@
    スクロール領域の外なので引いておく */
 :root {
   --bottom-nav-space: calc(
-    4.25rem + max(1.25rem, 0.5rem + env(safe-area-inset-bottom)) - env(safe-area-inset-bottom)
+    4.25rem + max(1rem, env(safe-area-inset-bottom)) - env(safe-area-inset-bottom)
   );
 }
 
@@ -103,6 +103,9 @@
   body,
   #root {
     height: 100%;
+    /* ページ自体はスクロールさせない。スクロールは各タブの領域だけが持つ。
+       iOS の PWA でページが持ち上がったまま戻らない事故を減らす（viewport-guard.tsx も参照） */
+    overflow: hidden;
   }
 
   body {
