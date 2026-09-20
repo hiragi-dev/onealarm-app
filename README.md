@@ -80,4 +80,10 @@ PC の IP で開くときは、`npm run cert:renew` で自己署名証明書を�
 開発ツールを含まない本番ビルドをスマホから使うには `npm run serve` を実行し、
 表示される `https://<PC の IP>:4173/` を開きます（dev サーバーとは別のサイト扱いなので、
 設定と停止方法は入れ直しになります）。
+
+## 公開版
+
+main に push すると GitHub Actions が GitHub Pages へ配信します
+（`.github/workflows/deploy.yml`）。公開先は https://hiragi-dev.github.io/onealarm-app/ です。
+こちらは正規の HTTPS なので証明書の警告は出ず、ホーム画面に追加すれば PC 無しで使えます。
 どちらも端末の中だけで処理し、外部へ送信することはありません。

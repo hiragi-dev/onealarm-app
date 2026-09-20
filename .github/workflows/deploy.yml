@@ -1,0 +1,50 @@
+name: deploy
+
+# main へ push されるたびに本番ビルドを GitHub Pages へ出す。
+# 配信先はプロジェクトサイト（https://<user>.github.io/onealarm-app/）なので、
+# サブパス用の BASE_PATH を渡してビルドする（vite.config.ts）。
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 配信は最新だけあればよい。古い実行が後から上書きしないよう順番に流す
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '26'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+        env:
+          BASE_PATH: /${{ github.event.repository.name }}/
+      # GitHub Pages には SPA 用の書き換えが無く、/stop のような深いリンクや
+      # ホーム画面のアイコンからの起動が 404 になる。404 のときも index.html を返させて
+      # ルーターに任せる
+      - run: cp dist/index.html dist/404.html
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

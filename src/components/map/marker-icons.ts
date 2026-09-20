@@ -6,11 +6,14 @@ import L from 'leaflet'
  */
 
 // Leaflet の既定マーカー画像はバンドラー経由だとパスが壊れるため、
-// public/leaflet/ に置いた実体を直接参照するよう上書きする
+// public/leaflet/ に置いた実体を直接参照するよう上書きする。
+// サブパス配信（GitHub Pages）でも届くよう、配信先のパス（BASE_URL）を頭に付ける
+const publicPath = (file: string) => `${import.meta.env.BASE_URL}leaflet/${file}`
+
 export const stopPointIcon = L.icon({
-  iconUrl: '/leaflet/marker-icon.png',
-  iconRetinaUrl: '/leaflet/marker-icon-2x.png',
-  shadowUrl: '/leaflet/marker-shadow.png',
+  iconUrl: publicPath('marker-icon.png'),
+  iconRetinaUrl: publicPath('marker-icon-2x.png'),
+  shadowUrl: publicPath('marker-shadow.png'),
   iconSize: [25, 41],
   iconAnchor: [12, 41],
   popupAnchor: [1, -34],

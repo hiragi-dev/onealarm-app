@@ -19,8 +19,17 @@ function devHttps() {
   return { key: fs.readFileSync(key), cert: fs.readFileSync(cert) }
 }
 
+/**
+ * 配信先のパス。GitHub Pages のプロジェクトサイトは https://<user>.github.io/<repo>/ の
+ * サブパスになるので、deploy.yml が BASE_PATH=/onealarm-app/ を渡す。手元は '/'。
+ * 絶対パスで書いた場所（PWA のマニフェスト、Leaflet のマーカー画像、ルーターの basepath）は
+ * すべてここから導く
+ */
+const base = process.env.BASE_PATH ?? '/'
+
 // https://vite.dev/config/
 export default defineConfig({
+  base,
   server: { https: devHttps() },
   // 本番ビルドの配信（npm run preview）も同じ証明書で HTTPS にする。
   // 開発ツールを含まない状態でスマホから使うための経路
@@ -41,13 +50,13 @@ export default defineConfig({
       injectRegister: null,
       includeAssets: ['favicon.svg', 'apple-touch-icon-180x180.png'],
       manifest: {
-        id: '/',
+        id: base,
         name: 'OneAlarm',
         short_name: 'OneAlarm',
         description: 'ひとつだけのアラーム',
         lang: 'ja',
-        start_url: '/',
-        scope: '/',
+        start_url: base,
+        scope: base,
         display: 'standalone',
         orientation: 'portrait',
         background_color: '#0a0a0a',

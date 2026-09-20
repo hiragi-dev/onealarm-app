@@ -7,6 +7,8 @@ import './index.css'
 
 const router = createRouter({
   routeTree,
+  // GitHub Pages のようなサブパス配信（vite.config.ts の base）に追従する。末尾の / は付けない
+  basepath: import.meta.env.BASE_URL.replace(/\/$/, ''),
   defaultPreload: 'intent',
   scrollRestoration: true,
   // タブ切り替えを View Transitions で動かす。向き（forward / back）を type として渡し、
