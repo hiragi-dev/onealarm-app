@@ -132,6 +132,9 @@ export const DEV_PANEL_NOTE =
 
 export const DEMO_ENABLED_HELP = '本物の MQTT の代わりに、アプリ内の偽のデバイスへ繋ぎます'
 
+export const REAL_SENSORS_HELP =
+  '実機で歩きながら、歩行検知を有効にする地点や一時停止の送信を試すとき'
+
 export const BROKER_REACHABLE_HELP = '切ると次の接続が失敗し、エラー時の見え方を確認できます'
 
 export const EDGE_RESPONSIVE_HELP =

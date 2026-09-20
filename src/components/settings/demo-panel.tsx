@@ -18,6 +18,7 @@ import {
   DEMO_ENABLED_HELP,
   DEV_PANEL_NOTE,
   EDGE_RESPONSIVE_HELP,
+  REAL_SENSORS_HELP,
 } from '@/components/settings/settings-shared'
 
 /**
@@ -77,6 +78,12 @@ export function DemoPanel() {
 
               {demo.enabled && (
                 <>
+                  <ToggleRow
+                    label="センサーは本物を使う"
+                    help={REAL_SENSORS_HELP}
+                    checked={demo.realSensors}
+                    onCheckedChange={demo.setRealSensors}
+                  />
                   <ToggleRow
                     label="ブローカーに届く"
                     help={BROKER_REACHABLE_HELP}

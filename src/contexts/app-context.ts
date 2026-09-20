@@ -62,7 +62,13 @@ export type DemoControls = {
   dropConnection: () => void
   /** 時刻の到来を待たずに鳴らす */
   startRinging: (alarmId: string) => void
-  /** 歩行中かを手で切り替える（デモでは加速度センサーを使わない） */
+  /**
+   * デモのデバイスに繋いだまま、センサーだけ本物（GPS・加速度）を使う。
+   * 実機で歩きながら「歩行検知を有効にする地点」や一時停止の送信を試すため
+   */
+  realSensors: boolean
+  setRealSensors: (real: boolean) => void
+  /** 歩行中かを手で切り替える（ダミーのセンサーのときだけ効く） */
   setWalking: (walking: boolean) => void
   /** fake のデバイスと停止方法を初期状態に戻す */
   reset: () => void
@@ -95,6 +101,8 @@ export type AppStore = {
   sendPauseCommand: (
     durationMs: number,
   ) => Effect.Effect<void, BrokerNotConnectedError | EdgeOfflineError>
+  /** 一時停止を送った回数と最終送信時刻。返事が無いコマンドなので、送れている事実をここで見せる */
+  pauseStats: { count: number; lastAt: number | null }
 
   // --- 停止方法（位置情報） ---
   stopMethods: StopMethod[]

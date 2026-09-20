@@ -138,8 +138,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // --- dev 専用: fake のデバイス ---
   const [demoEnabled, setDemoEnabled] = React.useState(false)
+  const [demoRealSensors, setDemoRealSensors] = React.useState(false)
   const [brokerReachable, setBrokerReachable] = React.useState(true)
   const [edgeResponsive, setEdgeResponsive] = React.useState(true)
+  /** ダミーのセンサーを使うか。デモでも「センサーは本物」を選べば本物を使う */
+  const dummySensors = demoEnabled && !demoRealSensors
 
   // --- センサー（本物）。デモの間は購読しない ---
   const notify = useNotify()
@@ -147,8 +150,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     (error: LocationUnavailableError) => notify(errorSeverity(error), errorMessage(error)),
     [notify],
   )
-  const geo = useGeolocation({ enabled: !demoEnabled, onError: notifyLocationError })
-  const sensor = useMotionSensor({ enabled: !demoEnabled })
+  const geo = useGeolocation({ enabled: !dummySensors, onError: notifyLocationError })
+  const sensor = useMotionSensor({ enabled: !dummySensors })
 
   // --- センサー（デモのダミー）---
   const [demoWalking, setDemoWalking] = React.useState(false)
@@ -233,6 +236,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         // 開発ツールの切り替え（到達不能・無応答）を、作り直した fake にも引き継ぐ
         yield* fake.broker.setReachable(snapshot.brokerReachable)
         yield* fake.device.setResponsive(snapshot.edgeResponsive)
+        // 「歩行検知を有効にする地点」はデバイスが持たずアプリ側の保存から来る。
+        // 何も保存されていなければダミーのアラームの地点を種として入れ、
+        // 繋いだ直後から解除地点の流れを試せるようにする
+        yield* Effect.sync(() =>
+          setWalkUnlockPoints((prev) => {
+            if (Object.keys(prev).length > 0) return prev
+            const seeded: Record<string, string> = {}
+            for (const a of DUMMY_ALARMS) {
+              if (a.walkUnlockPointId !== null) seeded[a.id] = a.walkUnlockPointId
+            }
+            return seeded
+          }),
+        )
         return fake
       }),
     [],
@@ -419,8 +435,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     [appendLog, withClient],
   )
 
+  const [pauseStats, setPauseStats] = React.useState<{ count: number; lastAt: number | null }>({
+    count: 0,
+    lastAt: null,
+  })
   const sendPauseCommand = React.useCallback(
-    (durationMs: number) => withClient('一時停止を送信', (c) => c.pauseRinging(durationMs)),
+    (durationMs: number) =>
+      withClient('一時停止を送信', (c) => c.pauseRinging(durationMs)).pipe(
+        Effect.tap(() =>
+          Effect.sync(() =>
+            setPauseStats((prev) => ({ count: prev.count + 1, lastAt: Date.now() })),
+          ),
+        ),
+      ),
     [withClient],
   )
 
@@ -494,16 +521,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // デモの歩行: 手で切り替えた「歩行中」の間だけ歩数が増える
   React.useEffect(() => {
-    if (!demoEnabled || !demoWalking) return
+    if (!dummySensors || !demoWalking) return
     const id = setInterval(() => setDemoStepCount((prev) => prev + 1), 500)
     return () => clearInterval(id)
-  }, [demoEnabled, demoWalking])
+  }, [dummySensors, demoWalking])
 
   // ================= 位置情報 =================
 
   // デモの GPS: 東京駅付近でわずかに揺れる
   React.useEffect(() => {
-    if (!demoEnabled) return
+    if (!dummySensors) return
     const id = setInterval(() => {
       setDemoPosition((prev) =>
         prev
@@ -516,7 +543,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       )
     }, 3000)
     return () => clearInterval(id)
-  }, [demoEnabled])
+  }, [dummySensors])
 
   // ================= dev 専用: fake のデバイスの操作 =================
 
@@ -530,6 +557,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     (): DemoControls => ({
       enabled: demoEnabled,
       setEnabled: setDemoEnabled,
+      realSensors: demoRealSensors,
+      setRealSensors: setDemoRealSensors,
       brokerReachable,
       setBrokerReachable: (reachable) => {
         setBrokerReachable(reachable)
@@ -555,13 +584,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setDemoStepCount(0)
         setDemoPosition(DUMMY_CURRENT_POSITION)
         setSimulatedPosition(null)
+        setPauseStats({ count: 0, lastAt: null })
         setLog([])
         void Effect.runPromise(
           latest.current.demoEnabled ? connect.pipe(Effect.ignore) : disconnect,
         )
       },
     }),
-    [brokerReachable, connect, demoEnabled, disconnect, edgeResponsive, withFake],
+    [brokerReachable, connect, demoEnabled, demoRealSensors, disconnect, edgeResponsive, withFake],
   )
 
   const value: AppStore = {
@@ -581,23 +611,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     ringingStatus: edgeState.ringing,
     sendStopCommand,
     sendPauseCommand,
+    pauseStats,
     stopMethods,
     addStopMethod,
     updateStopMethod,
     deleteStopMethod,
-    // デモの間はセンサーの代わりにダミーを出す
-    walkPermission: demoEnabled ? 'granted' : sensor.permission,
-    requestWalkPermission: demoEnabled ? Effect.void : sensor.requestPermission,
-    isWalking: demoEnabled ? demoWalking : sensor.isWalking,
+    // ダミーのセンサーのときは本物の代わりにダミーを出す
+    walkPermission: dummySensors ? 'granted' : sensor.permission,
+    requestWalkPermission: dummySensors ? Effect.void : sensor.requestPermission,
+    isWalking: dummySensors ? demoWalking : sensor.isWalking,
     walkUnlocked,
     unlockWalkDetection,
-    stepCount: demoEnabled ? demoStepCount : sensor.stepCount,
-    motion: demoEnabled ? null : sensor.motion,
-    lastEventAt: demoEnabled ? null : sensor.lastEventAt,
-    locationPermission: demoEnabled ? 'granted' : geo.permission,
-    watching: demoEnabled ? true : geo.watching,
-    startWatching: demoEnabled ? Effect.void : geo.startWatching,
-    currentPosition: demoEnabled ? demoPosition : geo.currentPosition,
+    stepCount: dummySensors ? demoStepCount : sensor.stepCount,
+    motion: dummySensors ? null : sensor.motion,
+    lastEventAt: dummySensors ? null : sensor.lastEventAt,
+    locationPermission: dummySensors ? 'granted' : geo.permission,
+    watching: dummySensors ? true : geo.watching,
+    startWatching: dummySensors ? Effect.void : geo.startWatching,
+    currentPosition: dummySensors ? demoPosition : geo.currentPosition,
     simulatedPosition,
     setSimulatedPosition,
     demo,

@@ -47,6 +47,8 @@ export function RingingTakeover() {
     requestWalkPermission,
     locationPermission,
     startWatching,
+    pauseStats,
+    currentPosition: realPosition,
     demo,
   } = useApp()
   const { alarmManagement } = useAppReadiness()
@@ -115,10 +117,45 @@ export function RingingTakeover() {
                   <Badge variant="warning">開発用</Badge>
                   <span className="text-xs text-muted-foreground">本番ビルドには含まれません</span>
                 </div>
+                {/* 実機で歩きながら試すときの手がかり。返事の無い pause が送れているか、
+                    解除地点の判定がどうなっているかを、この画面から離れずに読めるようにする */}
+                <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                  <dt>歩行検知</dt>
+                  <dd className="font-mono">
+                    {match(walkGate)
+                      .with({ kind: 'open' }, () => '有効')
+                      .with({ kind: 'locked' }, (g) => `無効（${g.point.label} まで ${formatDistance(g.distance)}）`)
+                      .exhaustive()}
+                  </dd>
+                  <dt>歩行</dt>
+                  <dd className="font-mono">
+                    {match(isWalking)
+                      .with(true, () => '歩行中')
+                      .with(false, () => '静止中')
+                      .exhaustive()}
+                  </dd>
+                  <dt>一時停止の送信</dt>
+                  <dd className="font-mono">
+                    {pauseStats.count} 回
+                    {pauseStats.lastAt !== null &&
+                      `（最終 ${new Date(pauseStats.lastAt).toLocaleTimeString('ja-JP', { hour12: false })}）`}
+                  </dd>
+                  <dt>現在地</dt>
+                  <dd className="font-mono">
+                    {match({ simulatedPosition, realPosition })
+                      .with({ simulatedPosition: P.not(null) }, () => '疑似')
+                      .with({ realPosition: P.not(null) }, ({ realPosition: p }) => `±${Math.round(p.accuracy)} m`)
+                      .otherwise(() => '未取得')}
+                  </dd>
+                </dl>
                 <div className="flex flex-col items-start gap-2">
-                  {/* 歩行検知は加速度センサー由来で、開発機を振らないと歩行中にならない。
-                      この画面の主役である WalkStatus の見え方を確かめるために手で切り替える */}
-                  <Button variant="outline" onClick={() => demo.setWalking(!isWalking)}>
+                  {/* ダミーのセンサーのときは、開発機を振っても歩行中にならないので手で切り替える。
+                      本物のセンサーを使っているときは効かないので押せなくする */}
+                  <Button
+                    variant="outline"
+                    disabled={!demo.enabled || demo.realSensors}
+                    onClick={() => demo.setWalking(!isWalking)}
+                  >
                     {match(isWalking)
                       .with(true, () => '静止中にする')
                       .with(false, () => '歩行中にする')
