@@ -22,6 +22,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { useDemo } from '@/contexts/demo-context'
 import { useNotify } from '@/contexts/notification-context'
 import { useRunEffectState } from '@/lib/effect-react'
+import { errorMessage, errorSeverity, RingingLockedError } from '@/lib/errors'
 import { defaultTimeValue, formatDaysOfWeek, type Alarm, type DayOfWeek } from '@/lib/alarm'
 import type { StopMethod } from '@/lib/stop-method'
 import { validateAlarmForm } from '@/lib/validation'
@@ -101,6 +102,18 @@ export function EditAlarmPage({
       onClose()
       notify('success', 'アラームを変更しました')
     }
+  }
+
+  /**
+   * 鳴動中に削除ボタンを叩いたときの説明。ボタン自体は disabled でクリックを受けないので、
+   * 囲いの div で拾う（接続設定のロック通知と同じ作り）。常時「鳴動中は削除できません」と
+   * 書いておくと、削除できる状態のときも注意書きが居座るため、試みた瞬間だけ伝える。
+   * 文言は削除操作が鳴動中に失敗したときと同じ RingingLockedError から引く
+   */
+  const notifyIfRinging = () => {
+    if (!isRinging) return
+    const error = new RingingLockedError({ operation: 'アラームを削除' })
+    notify(errorSeverity(error), errorMessage(error))
   }
 
   const handleDelete = async () => {
@@ -249,7 +262,10 @@ export function EditAlarmPage({
             />
           </div>
 
-          <div className="mt-6 rounded-3xl border border-destructive/25 bg-destructive/6 p-4">
+          <div
+            className="mt-6 rounded-3xl border border-destructive/25 bg-destructive/6 p-4"
+            onClick={notifyIfRinging}
+          >
             <Button
               variant="ghost"
               className="w-full justify-start px-0 font-extrabold text-destructive hover:bg-transparent hover:text-destructive"
@@ -257,9 +273,8 @@ export function EditAlarmPage({
               onClick={() => void handleDelete()}
             >
               <Trash2 />
-              このアラームを削除
+              削除
             </Button>
-            <p className="mt-1 text-xs text-muted-foreground">鳴動中は削除できません</p>
           </div>
         </div>
         </div>
