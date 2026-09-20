@@ -3,6 +3,7 @@ import { AlarmClock, MapPin, Plus, Trash2 } from 'lucide-react'
 
 import { InfoPopover } from '@/components/common/info-popover'
 import { StaticMapPreview } from '@/components/map/static-map-preview'
+import { MAP_ATTRIBUTION_TEXT } from '@/components/map/tile-source'
 import { StopMethodDialogs } from '@/components/stop/stop-method-dialogs'
 import { useStopMethodEditing } from '@/components/stop/use-stop-method-editing'
 import { Badge } from '@/components/ui/badge'
@@ -118,11 +119,8 @@ export function StopMethodSettings() {
               ))}
             </ul>
 
-            {/* プレビューはタイル画像を直に読んでいて Leaflet の出典表示が付かないので、
-                ここで出す */}
-            <p className="text-[0.65rem] text-muted-foreground/40">
-              地図データ © OpenStreetMap contributors
-            </p>
+            {/* プレビューは撮った画像を出すだけで地図側の帰属表示が付かないので、ここで出す */}
+            <p className="text-[0.65rem] text-muted-foreground/40">{MAP_ATTRIBUTION_TEXT}</p>
           </>
         ))}
 

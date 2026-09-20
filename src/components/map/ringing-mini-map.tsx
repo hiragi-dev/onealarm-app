@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { Circle, MapContainer, Marker, Polyline, TileLayer, useMap } from 'react-leaflet'
+import { Circle, MapContainer, Marker, Polyline, useMap } from 'react-leaflet'
 import L from 'leaflet'
 
 import {
@@ -7,6 +7,7 @@ import {
   currentLocationIcon,
   stopPointIcon,
 } from '@/components/map/marker-icons'
+import { VectorTileLayer } from '@/components/map/vector-tile-layer'
 import type { GeoPoint } from '@/lib/geo'
 
 type Props = {
@@ -43,15 +44,7 @@ export function RingingMiniMap({ target, radiusMeters, position }: Props) {
         keyboard={false}
         zoomControl={false}
       >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          maxZoom={19}
-          // タイルの URL が座標そのものなので参照元は渡したくないが、OSM のタイル利用
-          // ポリシーはブラウザからの要求に Referer を求め、無いと「Blocked」画像を返す。
-          // 折り合いとして、オリジン（どのアプリか）だけ渡してパスは渡さない
-          referrerPolicy="origin"
-        />
+        <VectorTileLayer />
         <FitToBoth target={target} radiusMeters={radiusMeters} position={position} />
 
         <Circle

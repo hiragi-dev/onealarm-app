@@ -1,6 +1,7 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
 @import 'leaflet/dist/leaflet.css';
+@import 'maplibre-gl/dist/maplibre-gl.css';
 /* 丸ゴシック体。文字も「丸っぽく・太く」揃えるため、システムフォント任せにせず同梱する。
    iOS/macOS にはヒラギノ丸ゴがあるが Android には丸ゴシックが無く、端末で印象が変わるため。
    使う太さは 700 と 800 の2つだけ。ここに無い太さを className で指定しても合成や
