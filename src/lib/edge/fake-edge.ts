@@ -1,18 +1,21 @@
 import { Effect, Either, Queue, Ref, type Scope } from 'effect'
 
-import type { Alarm } from '@/lib/alarm'
+import { sortAlarmsByTime, type Alarm, type RingingStatus } from '@/lib/alarm'
 import { BrokerUnreachableError } from '@/lib/errors'
 import {
-  encodeDeviceMessagePayload,
-  parseCommandEnvelope,
+  encodeAlarmsPayload,
+  encodeRingingPayload,
+  encodeStatusPayload,
+  parseCommand,
+  toAlarm,
   topicsFor,
-  type CommandEnvelope,
-  type DeviceState,
+  type Command,
 } from '@/lib/edge/protocol'
 import type { EdgeTransport, TransportEvent } from '@/lib/edge/transport'
 
 /**
  * テスト用の transport 実装と、その先にいるダミーのエッジデバイス。
+ * 開発ツールの「デモのデバイスに繋ぐ」もこれを使う。
  *
  * ## ここで意図的に「できない」ようにしていること
  *
@@ -23,28 +26,40 @@ import type { EdgeTransport, TransportEvent } from '@/lib/edge/transport'
  * - retain がない。後から繋いだ人に過去の値を配ることはない
  *
  * つまり、ブローカーのセッション永続や retain に頼るコードを書くと必ずテストが落ちる。
- * fake が本物より甘いと「テストは通るが実機で壊れる」が起きるので、逆に振ってある。
- * この3点を捨てても成立する設計にしておけば、ブローカーの実装差に悩まされない
+ * fake が本物より甘いと「テストは通るが実機で壊れる」が起きるので、逆に振ってある
  * （DECISION.md のテスト戦略）。
+ *
+ * ## デバイスの振る舞いは実機（onealarm-fw）に合わせる
+ *
+ * - add / edit / delete / pause / stop は何も返さない（ack も一覧も）
+ * - list / ringing_status / status にだけ返事をする
+ * - 鳴動中は鳴動状態を自発的に配信する（実機は 1 秒ごと。ここでは状態が変わった時）
+ *   が、止まったときは配信しない
+ * こちらも「実機より甘い fake」にならないよう、返さないものは返さない。
  */
+
+export type DeviceState = {
+  readonly alarms: readonly Alarm[]
+  readonly ringing: RingingStatus
+}
 
 export type FakeEdgeOptions = {
   readonly deviceId: string
   readonly alarms?: readonly Alarm[]
-  readonly ringing?: { isRinging: boolean; ringingIds: string[] }
+  readonly ringing?: RingingStatus
 }
 
 export type FakeDevice = {
   readonly getState: Effect.Effect<DeviceState>
   /**
    * アプリの操作によらない状態変化（時刻の到来で鳴り出す、本体のボタンで止まる等）。
-   * 変化した状態は publish するが、アプリが切断中なら当然届かない。
+   * 鳴っていれば実機と同じく鳴動状態を publish するが、アプリが切断中なら当然届かない。
    */
   readonly mutate: (f: (state: DeviceState) => DeviceState) => Effect.Effect<void>
   /** false にすると受信しても黙る。電源off・フリーズで応答が返らない状況 */
   readonly setResponsive: (responsive: boolean) => Effect.Effect<void>
   /** デバイスが受け取ったコマンドの記録。届いた順に入る */
-  readonly receivedCommands: Effect.Effect<readonly CommandEnvelope[]>
+  readonly receivedCommands: Effect.Effect<readonly Command[]>
 }
 
 export type FakeBroker = {
@@ -55,10 +70,10 @@ export type FakeBroker = {
   /** アプリが今この瞬間に購読しているトピック */
   readonly subscriptions: Effect.Effect<readonly string[]>
   /**
-   * 任意のペイロードをアプリに流し込む。壊れた電文や、遅れて届いた ack のように
+   * 任意のペイロードをアプリに流し込む。壊れた電文のように
    * まっとうなデバイスからは出てこないものを再現するための口。
    */
-  readonly injectDeviceMessage: (payload: string) => Effect.Effect<void>
+  readonly injectDeviceMessage: (topic: string, payload: string) => Effect.Effect<void>
 }
 
 export type FakeEdge = {
@@ -67,7 +82,7 @@ export type FakeEdge = {
   readonly broker: FakeBroker
 }
 
-const EMPTY_RINGING = { isRinging: false, ringingIds: [] as string[] }
+const EMPTY_RINGING: RingingStatus = { isRinging: false, ringingIds: [] }
 
 export function makeFakeEdge(
   options: FakeEdgeOptions,
@@ -84,80 +99,81 @@ export function makeFakeEdge(
     })
     const subscriptions = yield* Ref.make<readonly string[]>([])
     const responsive = yield* Ref.make(true)
-    const received = yield* Ref.make<readonly CommandEnvelope[]>([])
+    const received = yield* Ref.make<readonly Command[]>([])
     const alarmSeq = yield* Ref.make(0)
     const deviceState = yield* Ref.make<DeviceState>({
       alarms: [...(options.alarms ?? [])],
-      ringing: options.ringing ?? { ...EMPTY_RINGING },
+      ringing: options.ringing ?? EMPTY_RINGING,
     })
 
     /** デバイス → アプリ。購読していなければ捨てる。溜めもしない */
-    const deliverToApp = (payload: string) =>
+    const deliverToApp = (topic: string, payload: string) =>
       Effect.gen(function* () {
         const isConnected = yield* Ref.get(connected)
-        const subscribed = (yield* Ref.get(subscriptions)).includes(topics.event)
+        const subscribed = (yield* Ref.get(subscriptions)).includes(topic)
         if (!isConnected || !subscribed) return
-        yield* Queue.offer(events, { kind: 'message', topic: topics.event, payload })
+        yield* Queue.offer(events, { kind: 'message', topic, payload })
       })
 
-    const publishState = Effect.gen(function* () {
+    const publishAlarms = Effect.gen(function* () {
       const state = yield* Ref.get(deviceState)
-      yield* deliverToApp(encodeDeviceMessagePayload({ kind: 'state', state }))
+      yield* deliverToApp(topics.alarms, encodeAlarmsPayload(sortAlarmsByTime([...state.alarms])))
+    })
+
+    const publishRinging = Effect.gen(function* () {
+      const state = yield* Ref.get(deviceState)
+      yield* deliverToApp(topics.ringingStatus, encodeRingingPayload(state.ringing))
     })
 
     const nextAlarmId = Ref.updateAndGet(alarmSeq, (n) => n + 1).pipe(
       Effect.map((n) => `alarm-${n}`),
     )
 
-    /**
-     * コマンドの適用。
-     *
-     * 応答は必ず「新しい全状態 → ack」の順で返す。逆にすると、ack を受けた呼び出し側が
-     * まだ古い一覧を見ている瞬間ができてしまう。この順序は取り決めの一部。
-     */
-    const handleCommand = (envelope: CommandEnvelope) =>
+    /** コマンドの適用。返事をするのは list / ringing_status / status だけ（実機と同じ） */
+    const handleCommand = (command: Command) =>
       Effect.gen(function* () {
-        const { command } = envelope
-
-        switch (command.kind) {
-          case 'get-state':
-            // 状態を返すことが応答そのものなので ack は返さない
-            yield* publishState
+        switch (command.type) {
+          case 'list':
+            yield* publishAlarms
             return
-          case 'set-power':
-            break
-          case 'add-alarm': {
+          case 'ringing_status':
+            yield* publishRinging
+            return
+          case 'status':
+            yield* deliverToApp(topics.status, encodeStatusPayload(true))
+            return
+          case 'add': {
             const id = yield* nextAlarmId
             yield* Ref.update(deviceState, (s) => ({
               ...s,
-              alarms: [...s.alarms, { id, ...command.alarm }],
+              alarms: [...s.alarms, toAlarm({ id, ...command })],
             }))
-            break
+            return
           }
-          case 'edit-alarm':
-            yield* Ref.update(deviceState, (s) => ({
-              ...s,
-              alarms: s.alarms.map((a) =>
-                a.id === command.id ? { id: a.id, ...command.alarm } : a,
-              ),
-            }))
-            break
-          case 'delete-alarm':
-            // 存在しないIDでも成功扱いにする。再送で二度届いても結果が変わらないように
+          case 'edit':
+            yield* Ref.update(deviceState, (s) => {
+              const next = toAlarm(command)
+              const exists = s.alarms.some((a) => a.id === command.id)
+              return {
+                ...s,
+                // 実機は未知の id なら新規作成する
+                alarms: exists ? s.alarms.map((a) => (a.id === command.id ? next : a)) : [...s.alarms, next],
+              }
+            })
+            return
+          case 'delete':
+            // 存在しないIDでも何も起きない。再送で二度届いても結果が変わらないように
             yield* Ref.update(deviceState, (s) => ({
               ...s,
               alarms: s.alarms.filter((a) => a.id !== command.id),
             }))
-            break
-          case 'stop-ringing':
-            yield* Ref.update(deviceState, (s) => ({ ...s, ringing: { ...EMPTY_RINGING } }))
-            break
+            return
+          case 'pause':
+            return
+          case 'stop':
+            yield* Ref.update(deviceState, (s) => ({ ...s, ringing: EMPTY_RINGING }))
+            return
         }
-
-        yield* publishState
-        yield* deliverToApp(
-          encodeDeviceMessagePayload({ kind: 'ack', requestId: envelope.requestId }),
-        )
       })
 
     const transport: EdgeTransport = {
@@ -191,7 +207,7 @@ export function makeFakeEdge(
           if (!(yield* Ref.get(connected))) return
           if (topic !== topics.command) return
 
-          const decoded = parseCommandEnvelope(payload)
+          const decoded = parseCommand(payload)
           if (Either.isLeft(decoded)) return
           yield* Ref.update(received, (list) => [...list, decoded.right])
 
@@ -202,7 +218,12 @@ export function makeFakeEdge(
 
     const device: FakeDevice = {
       getState: Ref.get(deviceState),
-      mutate: (f) => Ref.update(deviceState, f).pipe(Effect.zipRight(publishState)),
+      mutate: (f) =>
+        Ref.update(deviceState, f).pipe(
+          Effect.zipRight(Ref.get(deviceState)),
+          // 実機は鳴っている間だけ鳴動状態を配信する。止まったときは何も言わない
+          Effect.flatMap((s) => (s.ringing.isRinging ? publishRinging : Effect.void)),
+        ),
       setResponsive: (value) => Ref.set(responsive, value),
       receivedCommands: Ref.get(received),
     }

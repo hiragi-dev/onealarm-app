@@ -1,126 +1,188 @@
 import { Either, Schema } from 'effect'
 
-import { ALL_DAYS } from '@/lib/alarm'
+import { ALL_DAYS, type Alarm, type RingingStatus } from '@/lib/alarm'
 
 /**
- * PWA とエッジデバイスの間で交わす電文の定義（MQTT のペイロード）。
+ * 実機（onealarm-fw / eager-alarm-edge）が話す MQTT API v2 の電文。
  *
- * この層の設計方針は DECISION.md の通り、
- * **ブローカーのセッション永続（オフライン中のメッセージキュー）に依存しない**こと。
- * そのため電文は「起きた出来事の差分」ではなく、常に**その時点の全状態**を運ぶ。
- * 受け手は届いた state で手元を丸ごと置き換えるだけでよく、
- * 「切断中に何を取りこぼしたか」を考える必要がない。
+ * デバイス側の仕様は eager-alarm-edge の MQTT_API_SPEC.md。要点:
+ * - トピックは 4 本。コマンドは 1 本、返事は種類ごとに 3 本（alarms / status / ringing_status）
+ * - 項目名は snake_case。アプリ側の Alarm（camelCase）とはここで相互変換する
+ * - ack が無い。add / edit / delete / pause / stop は返事を返さないので、
+ *   結果を知るには直後に list / ringing_status を送って取り直す（client.ts）
+ * - 返事は差分ではなく「全一覧」「全鳴動状態」。届いた内容で手元を丸ごと置き換える
+ * - walkUnlockPointId はデバイスが知らない項目で、送っても保存されない。
+ *   アプリ側（storage.ts）で id ごとに持ち、受信した一覧に重ねる
+ * - is_nfc_enabled はデバイスが NFC 認証を要求するかの印。アプリは NFC を廃止したので
+ *   常に false を送り、デバイスに認証を求めさせない
  *
- * retain も使わない。接続のたびにアプリ側から get-state を送って取り直すので、
- * ブローカーに状態を覚えておいてもらう必要がないため。
- * 結果として、この電文のやりとりは fake の transport だけで完全に検証できる。
+ * DECISION.md の方針どおり retain もセッション永続も使わない。接続のたびに
+ * 購読し直して取り直せば、これらが無くても手元は現状に追いつく。
  */
 
 const DayOfWeekSchema = Schema.Literal(...ALL_DAYS)
+const DaysOfWeekSchema = Schema.mutable(Schema.Array(DayOfWeekSchema))
 
-/** アラームの中身（id を除く）。追加・変更で送る */
-export const AlarmInputSchema = Schema.Struct({
-  time: Schema.String,
-  daysOfWeek: Schema.mutable(Schema.Array(DayOfWeekSchema)),
-  isEnabled: Schema.Boolean,
-  stopMethodId: Schema.NullOr(Schema.String),
-  /**
-   * 後から足した項目。この項目を知らないデバイスの state も読めるよう、
-   * 欠けていれば null として扱う（デバイスは受け取った項目をそのまま持ち回るだけなので、
-   * 送る側が付けていれば state にも乗って返ってくる）
-   */
-  walkUnlockPointId: Schema.optionalWith(Schema.NullOr(Schema.String), { default: () => null }),
-})
-export type AlarmInput = Schema.Schema.Type<typeof AlarmInputSchema>
-
-/** エッジデバイスが保持している1件のアラーム。id はデバイスが採番する */
-export const AlarmSchema = Schema.Struct({
+/** デバイスが返す 1 件のアラーム。古い個体は項目が欠けることがあるので既定値で埋める */
+export const DeviceAlarmSchema = Schema.Struct({
   id: Schema.String,
-  ...AlarmInputSchema.fields,
+  time: Schema.String,
+  days_of_week: DaysOfWeekSchema,
+  is_enabled: Schema.optionalWith(Schema.Boolean, { default: () => true }),
+  stop_method_id: Schema.optionalWith(Schema.NullOr(Schema.String), { default: () => null }),
+})
+export type DeviceAlarm = Schema.Schema.Type<typeof DeviceAlarmSchema>
+
+export const AlarmsPayloadSchema = Schema.mutable(Schema.Array(DeviceAlarmSchema))
+
+export const RingingStatusPayloadSchema = Schema.Struct({
+  is_ringing: Schema.Boolean,
+  ringing_ids: Schema.mutable(Schema.Array(Schema.String)),
 })
 
-export const RingingStatusSchema = Schema.Struct({
-  isRinging: Schema.Boolean,
-  ringingIds: Schema.mutable(Schema.Array(Schema.String)),
-})
+export const StatusPayloadSchema = Schema.Struct({ online: Schema.Boolean })
 
-/** エッジデバイスの全状態。差分ではなくこれ1つで手元を置き換える */
-export const DeviceStateSchema = Schema.Struct({
-  alarms: Schema.mutable(Schema.Array(AlarmSchema)),
-  ringing: RingingStatusSchema,
-})
-export type DeviceState = Schema.Schema.Type<typeof DeviceStateSchema>
+/** add / edit で送るアラームの中身 */
+const AlarmFields = {
+  time: Schema.String,
+  days_of_week: DaysOfWeekSchema,
+  is_enabled: Schema.Boolean,
+  stop_method_id: Schema.NullOr(Schema.String),
+  is_nfc_enabled: Schema.Boolean,
+}
 
 /** アプリ → デバイス */
 export const CommandSchema = Schema.Union(
-  /** 全状態をよこせ。接続のたびに必ず送る */
-  Schema.Struct({ kind: Schema.Literal('get-state') }),
-  Schema.Struct({ kind: Schema.Literal('set-power'), power: Schema.Literal('on', 'off') }),
-  Schema.Struct({ kind: Schema.Literal('add-alarm'), alarm: AlarmInputSchema }),
-  Schema.Struct({
-    kind: Schema.Literal('edit-alarm'),
-    id: Schema.String,
-    alarm: AlarmInputSchema,
-  }),
-  Schema.Struct({ kind: Schema.Literal('delete-alarm'), id: Schema.String }),
-  Schema.Struct({ kind: Schema.Literal('stop-ringing') }),
+  Schema.Struct({ type: Schema.Literal('list') }),
+  Schema.Struct({ type: Schema.Literal('status') }),
+  Schema.Struct({ type: Schema.Literal('ringing_status') }),
+  Schema.Struct({ type: Schema.Literal('add'), ...AlarmFields }),
+  Schema.Struct({ type: Schema.Literal('edit'), id: Schema.String, ...AlarmFields }),
+  Schema.Struct({ type: Schema.Literal('delete'), id: Schema.String }),
+  Schema.Struct({ type: Schema.Literal('pause'), duration_ms: Schema.Number }),
+  Schema.Struct({ type: Schema.Literal('stop') }),
 )
 export type Command = Schema.Schema.Type<typeof CommandSchema>
 
-/**
- * コマンドは requestId を付けて送る。デバイスは同じ requestId を ack で返す。
- * 遅れて届いた ack や重複した ack を「今待っている応答」と取り違えないため。
- */
-export const CommandEnvelopeSchema = Schema.Struct({
-  requestId: Schema.String,
-  command: CommandSchema,
-})
-export type CommandEnvelope = Schema.Schema.Type<typeof CommandEnvelopeSchema>
+/** アプリ側のアラーム入力（id 以外）。デバイスに送るのは alarmCommandFields が選ぶ */
+export type AlarmInput = Omit<Alarm, 'id'>
 
-/** デバイス → アプリ */
-export const DeviceMessageSchema = Schema.Union(
-  Schema.Struct({ kind: Schema.Literal('state'), state: DeviceStateSchema }),
-  Schema.Struct({ kind: Schema.Literal('ack'), requestId: Schema.String }),
-)
-export type DeviceMessage = Schema.Schema.Type<typeof DeviceMessageSchema>
+export type DeviceTopics = {
+  readonly command: string
+  readonly alarms: string
+  readonly status: string
+  readonly ringingStatus: string
+}
 
-/**
- * トピック。デバイスIDで名前空間を切り、向きごとに1本ずつ。
- * トピックを状態の種類ごとに分けない（alarms / status を別トピックにしない）のは、
- * 全状態を1つの電文で運ぶ以上、分ける意味がないうえ、
- * 分けると「片方だけ届いた」中間状態を扱う羽目になるため。
- */
-export function topicsFor(deviceId: string): { command: string; event: string } {
+/** トピック。プレフィックスは旧アプリ・実機と同じ eager-alarm */
+export function topicsFor(deviceId: string): DeviceTopics {
+  const prefix = `eager-alarm/${deviceId}`
   return {
-    command: `onealarm/${deviceId}/cmd`,
-    event: `onealarm/${deviceId}/evt`,
+    command: `${prefix}/command`,
+    alarms: `${prefix}/alarms`,
+    status: `${prefix}/status`,
+    ringingStatus: `${prefix}/ringing_status`,
   }
 }
 
-const encodeEnvelope = Schema.encodeSync(Schema.parseJson(CommandEnvelopeSchema))
-const decodeEnvelope = Schema.decodeUnknownEither(Schema.parseJson(CommandEnvelopeSchema))
-const encodeDeviceMessage = Schema.encodeSync(Schema.parseJson(DeviceMessageSchema))
-const decodeDeviceMessage = Schema.decodeUnknownEither(Schema.parseJson(DeviceMessageSchema))
+/** デバイス → アプリ。トピックで種類が決まる */
+export type DeviceMessage =
+  | { readonly kind: 'alarms'; readonly alarms: Alarm[] }
+  | { readonly kind: 'ringing'; readonly ringing: RingingStatus }
+  | { readonly kind: 'status'; readonly online: boolean }
 
-export function encodeCommandEnvelope(envelope: CommandEnvelope): string {
-  return encodeEnvelope(envelope)
+export type DeviceMessageKind = DeviceMessage['kind']
+
+/** デバイスの形からアプリの Alarm へ。walkUnlockPointId はデバイスが持たないので null */
+export function toAlarm(device: DeviceAlarm): Alarm {
+  return {
+    id: device.id,
+    time: device.time,
+    daysOfWeek: device.days_of_week,
+    isEnabled: device.is_enabled,
+    stopMethodId: device.stop_method_id,
+    walkUnlockPointId: null,
+  }
 }
 
-export function encodeDeviceMessagePayload(message: DeviceMessage): string {
-  return encodeDeviceMessage(message)
+/** アプリの入力から add / edit の中身へ。walkUnlockPointId は送らない */
+export function alarmCommandFields(input: AlarmInput): Omit<DeviceAlarm, 'id'> & {
+  is_nfc_enabled: boolean
+} {
+  return {
+    time: input.time,
+    days_of_week: [...input.daysOfWeek],
+    is_enabled: input.isEnabled,
+    stop_method_id: input.stopMethodId,
+    is_nfc_enabled: false,
+  }
+}
+
+const encodeCommandSync = Schema.encodeSync(Schema.parseJson(CommandSchema))
+const decodeCommand = Schema.decodeUnknownEither(Schema.parseJson(CommandSchema))
+const decodeAlarms = Schema.decodeUnknownEither(Schema.parseJson(AlarmsPayloadSchema))
+const decodeRinging = Schema.decodeUnknownEither(Schema.parseJson(RingingStatusPayloadSchema))
+const decodeStatus = Schema.decodeUnknownEither(Schema.parseJson(StatusPayloadSchema))
+const encodeAlarmsSync = Schema.encodeSync(Schema.parseJson(AlarmsPayloadSchema))
+const encodeRingingSync = Schema.encodeSync(Schema.parseJson(RingingStatusPayloadSchema))
+const encodeStatusSync = Schema.encodeSync(Schema.parseJson(StatusPayloadSchema))
+
+export function encodeCommand(command: Command): string {
+  return encodeCommandSync(command)
+}
+
+/** デバイス側（テスト用の fake）がコマンドを読むための対。実装対称性の確認も兼ねる */
+export function parseCommand(payload: string): Either.Either<Command, unknown> {
+  return decodeCommand(payload)
 }
 
 /**
- * 受信したペイロードを読む。壊れた電文・知らない電文は Left になる。
+ * 受信したペイロードを読む。知らないトピック・壊れた電文は Left になる。
  *
- * ここを例外ではなく Either にしているのは、受信は常駐ループの中で起きるためで、
+ * 例外ではなく Either にしているのは、受信は常駐ループの中で起きるためで、
  * 1通の不正な電文でループごと落ちるより、その1通を捨てて次を待つほうが正しい。
  */
-export function parseDeviceMessage(payload: string): Either.Either<DeviceMessage, unknown> {
-  return decodeDeviceMessage(payload)
+export function parseDeviceMessage(
+  topics: DeviceTopics,
+  topic: string,
+  payload: string,
+): Either.Either<DeviceMessage, unknown> {
+  switch (topic) {
+    case topics.alarms:
+      return Either.map(decodeAlarms(payload), (alarms) => ({
+        kind: 'alarms' as const,
+        alarms: alarms.map(toAlarm),
+      }))
+    case topics.ringingStatus:
+      return Either.map(decodeRinging(payload), (r) => ({
+        kind: 'ringing' as const,
+        ringing: { isRinging: r.is_ringing, ringingIds: r.ringing_ids },
+      }))
+    case topics.status:
+      return Either.map(decodeStatus(payload), (s) => ({ kind: 'status' as const, online: s.online }))
+    default:
+      return Either.left(new Error(`unknown topic: ${topic}`))
+  }
 }
 
-/** デバイス側（テスト用のダミーデバイス）がコマンドを読むための対。実装対称性の確認も兼ねる */
-export function parseCommandEnvelope(payload: string): Either.Either<CommandEnvelope, unknown> {
-  return decodeEnvelope(payload)
+// --- デバイス側の書き手（テスト用の fake が使う）---
+
+export function encodeAlarmsPayload(alarms: readonly Alarm[]): string {
+  return encodeAlarmsSync(
+    alarms.map((a) => ({
+      id: a.id,
+      time: a.time,
+      days_of_week: [...a.daysOfWeek],
+      is_enabled: a.isEnabled,
+      stop_method_id: a.stopMethodId,
+    })),
+  )
+}
+
+export function encodeRingingPayload(ringing: RingingStatus): string {
+  return encodeRingingSync({ is_ringing: ringing.isRinging, ringing_ids: [...ringing.ringingIds] })
+}
+
+export function encodeStatusPayload(online: boolean): string {
+  return encodeStatusSync({ online })
 }

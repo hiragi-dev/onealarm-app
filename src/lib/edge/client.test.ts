@@ -2,7 +2,6 @@ import {
   Duration,
   Effect,
   Either,
-  Exit,
   Fiber,
   SubscriptionRef,
   TestClock,
@@ -17,8 +16,8 @@ import { makeFakeEdge, type FakeBroker, type FakeDevice } from '@/lib/edge/fake-
 import type { AlarmInput } from '@/lib/edge/protocol'
 
 /**
- * fake の transport（= セッション永続も retain も持たない通信路）の上で
- * EdgeClient の本物のロジックを動かすテスト。
+ * fake の transport（= セッション永続も retain も持たない通信路）と、
+ * 実機と同じく返事をしない fake のデバイスの上で EdgeClient の本物のロジックを動かすテスト。
  *
  * 検証したいことの中心は「ブローカーが何も覚えていなくても手元の状態が
  * デバイスの実際の状態に収束するか」で、そこが担保できていれば
@@ -27,6 +26,13 @@ import type { AlarmInput } from '@/lib/edge/protocol'
 
 const DEVICE_ID = 'onealarm-test-01'
 const TIMEOUT = Duration.seconds(5)
+const POLL = Duration.seconds(3)
+
+const TOPICS = {
+  alarms: `eager-alarm/${DEVICE_ID}/alarms`,
+  ringing: `eager-alarm/${DEVICE_ID}/ringing_status`,
+  status: `eager-alarm/${DEVICE_ID}/status`,
+}
 
 const ALARM_INPUT: AlarmInput = {
   time: '06:30',
@@ -51,6 +57,8 @@ type Fixture = {
   readonly broker: FakeBroker
   /** 現在の状態を読む近道 */
   readonly read: Effect.Effect<EdgeState>
+  /** デバイスが受け取ったコマンドの種類を届いた順に */
+  readonly receivedTypes: Effect.Effect<string[]>
 }
 
 /**
@@ -73,33 +81,41 @@ function withEdge(
       const client = yield* makeEdgeClient(transport, {
         deviceId: DEVICE_ID,
         responseTimeout: TIMEOUT,
+        pollInterval: POLL,
       })
-      return yield* run({ client, device, broker, read: SubscriptionRef.get(client.state) })
+      return yield* run({
+        client,
+        device,
+        broker,
+        read: SubscriptionRef.get(client.state),
+        receivedTypes: device.receivedCommands.pipe(Effect.map((list) => list.map((c) => c.type))),
+      })
     }).pipe(Effect.scoped, Effect.provide(TestContext.TestContext)),
   )
 }
 
 describe('接続', () => {
-  it('接続すると購読し直し、全状態を取り直す', () =>
+  it('接続すると返事のトピックを購読し直し、一覧・鳴動状態・生存を取り直す', () =>
     withEdge(
-      ({ client, device, broker, read }) =>
+      ({ client, broker, read, receivedTypes }) =>
         Effect.gen(function* () {
           yield* client.connect
 
-          expect(yield* broker.subscriptions).toEqual([`onealarm/${DEVICE_ID}/evt`])
-          expect((yield* device.receivedCommands).map((c) => c.command.kind)).toEqual(['get-state'])
+          expect(yield* broker.subscriptions).toEqual([TOPICS.alarms, TOPICS.ringing, TOPICS.status])
+          expect(yield* receivedTypes).toEqual(['list', 'ringing_status', 'status'])
 
           const state = yield* read
           expect(state.broker).toBe('connected')
           expect(state.edge).toBe('online')
           expect(state.alarms.map((a) => a.id)).toEqual([EXISTING_ALARM.id])
+          expect(state.ringing).toEqual({ isRinging: false, ringingIds: [] })
           expect(state.syncedAt).not.toBeNull()
         }),
       { alarms: [EXISTING_ALARM] },
     ))
 
-  it('再接続のたびに購読と全状態取得をやり直す', () =>
-    withEdge(({ client, device, broker, read }) =>
+  it('再接続のたびに購読と取り直しをやり直す', () =>
+    withEdge(({ client, broker, read, receivedTypes }) =>
       Effect.gen(function* () {
         yield* client.connect
         yield* broker.dropConnection
@@ -110,11 +126,8 @@ describe('接続', () => {
 
         yield* client.connect
 
-        expect(yield* broker.subscriptions).toEqual([`onealarm/${DEVICE_ID}/evt`])
-        expect((yield* device.receivedCommands).map((c) => c.command.kind)).toEqual([
-          'get-state',
-          'get-state',
-        ])
+        expect(yield* broker.subscriptions).toEqual([TOPICS.alarms, TOPICS.ringing, TOPICS.status])
+        expect((yield* receivedTypes).filter((t) => t === 'list')).toHaveLength(2)
         expect((yield* read).syncedAt).not.toBeNull()
       }),
     ))
@@ -219,21 +232,22 @@ describe('接続', () => {
 })
 
 describe('コマンド', () => {
-  it('アラームを追加すると、ID はデバイスが採番した値で一覧に入る', () =>
-    withEdge(({ client, read }) =>
+  it('追加は add に続けて list を送り、返事の一覧で増えた 1 件の ID を返す', () =>
+    withEdge(({ client, read, receivedTypes }) =>
       Effect.gen(function* () {
         yield* client.connect
-        yield* client.addAlarm(ALARM_INPUT)
+        const id = yield* client.addAlarm(ALARM_INPUT)
 
-        // ack が返った時点で手元の一覧も新しくなっている（状態→ack の順で返る取り決め）
+        expect(id).toBe('alarm-1')
+        expect((yield* receivedTypes).slice(-2)).toEqual(['add', 'list'])
+        // 返事が届いた時点で手元の一覧も新しくなっている
         const state = yield* read
         expect(state.alarms).toHaveLength(1)
-        expect(state.alarms[0]?.id).toBe('alarm-1')
         expect(state.alarms[0]?.time).toBe(ALARM_INPUT.time)
       }),
     ))
 
-  it('変更・削除もデバイスの返す全状態で置き換わる', () =>
+  it('変更・削除もデバイスの返す全一覧で置き換わる', () =>
     withEdge(
       ({ client, read }) =>
         Effect.gen(function* () {
@@ -263,7 +277,7 @@ describe('コマンド', () => {
   it('未接続では送信そのものを行わない', () =>
     withEdge(({ client, device }) =>
       Effect.gen(function* () {
-        const result = yield* Effect.either(client.setPower('on'))
+        const result = yield* Effect.either(client.addAlarm(ALARM_INPUT))
 
         expect(Either.isLeft(result)).toBe(true)
         if (Either.isLeft(result)) {
@@ -274,13 +288,13 @@ describe('コマンド', () => {
       }),
     ))
 
-  it('応答が返らないコマンドはタイムアウトし、以後は待たずに offline として失敗する', () =>
+  it('返事が来ないコマンドはタイムアウトし、以後は待たずに offline として失敗する', () =>
     withEdge(({ client, device, read }) =>
       Effect.gen(function* () {
         yield* client.connect
         yield* device.setResponsive(false)
 
-        const fiber = yield* Effect.fork(Effect.either(client.setPower('on')))
+        const fiber = yield* Effect.fork(Effect.either(client.addAlarm(ALARM_INPUT)))
         yield* settle
         yield* TestClock.adjust(Duration.seconds(6))
         const first = yield* Fiber.join(fiber)
@@ -292,7 +306,7 @@ describe('コマンド', () => {
         expect((yield* read).edge).toBe('offline')
 
         // 2回目は時間を進めずに即座に失敗する（もう応答しないと分かっているため）
-        const second = yield* Effect.either(client.setPower('off'))
+        const second = yield* Effect.either(client.addAlarm(ALARM_INPUT))
         expect(Either.isLeft(second)).toBe(true)
         if (Either.isLeft(second)) {
           expect(second.left._tag).toBe('EdgeOfflineError')
@@ -300,7 +314,7 @@ describe('コマンド', () => {
       }),
     ))
 
-  it('応答待ちの最中に切断したら、タイムアウトを待たずに諦める', () =>
+  it('返事待ちの最中に切断したら、タイムアウトを待たずに諦める', () =>
     withEdge(({ client, device, broker }) =>
       Effect.gen(function* () {
         yield* client.connect
@@ -318,12 +332,21 @@ describe('コマンド', () => {
         }
       }),
     ))
+
+  it('一時停止は返事を待たずに送るだけ', () =>
+    withEdge(({ client, device }) =>
+      Effect.gen(function* () {
+        yield* client.connect
+        yield* client.pauseRinging(5000)
+        expect((yield* device.receivedCommands).at(-1)).toEqual({ type: 'pause', duration_ms: 5000 })
+      }),
+    ))
 })
 
 describe('鳴動', () => {
-  it('鳴動はデバイス側から届き、停止コマンドで消える', () =>
+  it('鳴り始めはデバイス側から届き、停止コマンドの後は取り直した鳴動状態で消える', () =>
     withEdge(
-      ({ client, device, read }) =>
+      ({ client, device, read, receivedTypes }) =>
         Effect.gen(function* () {
           yield* client.connect
 
@@ -338,49 +361,74 @@ describe('鳴動', () => {
           })
 
           yield* client.stopRinging
+          // 実機は stop に返事をしないので、直後の ringing_status で締める
+          expect((yield* receivedTypes).slice(-2)).toEqual(['stop', 'ringing_status'])
           expect((yield* read).ringing).toEqual({ isRinging: false, ringingIds: [] })
+        }),
+      { alarms: [EXISTING_ALARM] },
+    ))
+
+  it('デバイス側で鳴り止んだことは、定期的な問い合わせで拾う（実機は止まったとき何も言わない）', () =>
+    withEdge(
+      ({ client, device, read }) =>
+        Effect.gen(function* () {
+          yield* client.connect
+          yield* device.mutate((s) => ({
+            ...s,
+            ringing: { isRinging: true, ringingIds: [EXISTING_ALARM.id] },
+          }))
+          yield* settle
+          expect((yield* read).ringing?.isRinging).toBe(true)
+
+          // 本体のボタンで止まった。配信は無い
+          yield* device.mutate((s) => ({ ...s, ringing: { isRinging: false, ringingIds: [] } }))
+          yield* settle
+          expect((yield* read).ringing?.isRinging).toBe(true)
+
+          yield* TestClock.adjust(POLL)
+          yield* settle
+          expect((yield* read).ringing?.isRinging).toBe(false)
         }),
       { alarms: [EXISTING_ALARM] },
     ))
 })
 
+describe('生存確認', () => {
+  it('問い合わせに返事が無くなれば offline、また返れば online に戻る', () =>
+    withEdge(({ client, device, read }) =>
+      Effect.gen(function* () {
+        yield* client.connect
+        expect((yield* read).edge).toBe('online')
+
+        yield* device.setResponsive(false)
+        // 次の問い合わせ → 返事待ちのタイムアウト
+        yield* TestClock.adjust(POLL)
+        yield* settle
+        yield* TestClock.adjust(TIMEOUT)
+        yield* settle
+        expect((yield* read).edge).toBe('offline')
+
+        yield* device.setResponsive(true)
+        yield* TestClock.adjust(POLL)
+        yield* settle
+        expect((yield* read).edge).toBe('online')
+      }),
+    ))
+})
+
 describe('まっとうでない受信', () => {
-  it('壊れた電文と、知らない requestId の ack は捨てて動き続ける', () =>
+  it('壊れた電文や知らないトピックは捨てて動き続ける', () =>
     withEdge(({ client, broker, read }) =>
       Effect.gen(function* () {
         yield* client.connect
 
-        yield* broker.injectDeviceMessage('これは JSON ですらない')
-        yield* broker.injectDeviceMessage('{"kind":"unknown-kind"}')
-        // 取り消されたあとに遅れて届いた ack のつもり
-        yield* broker.injectDeviceMessage('{"kind":"ack","requestId":"req-999"}')
+        yield* broker.injectDeviceMessage(TOPICS.alarms, 'これは JSON ですらない')
+        yield* broker.injectDeviceMessage(TOPICS.ringing, '{"is_ringing":"yes"}')
         yield* settle
 
         // 常駐ループが生きているので、続く操作は普通に通る
         yield* client.addAlarm(ALARM_INPUT)
         expect((yield* read).alarms).toHaveLength(1)
-      }),
-    ))
-
-  it('重複した ack で次のコマンドが誤って完了しない', () =>
-    withEdge(({ client, device, broker }) =>
-      Effect.gen(function* () {
-        yield* client.connect
-        yield* client.addAlarm(ALARM_INPUT)
-
-        // 直前のコマンドの ack がもう一度届く（requestId は使い終わっている）
-        const used = (yield* device.receivedCommands).at(-1)?.requestId ?? ''
-        yield* broker.injectDeviceMessage(`{"kind":"ack","requestId":"${used}"}`)
-        yield* settle
-
-        // 応答しないデバイスへの次のコマンドが、その ack で完了扱いにならない
-        yield* device.setResponsive(false)
-        const fiber = yield* Effect.fork(Effect.exit(client.addAlarm(ALARM_INPUT)))
-        yield* settle
-        yield* TestClock.adjust(Duration.seconds(6))
-        const exit = yield* Fiber.join(fiber)
-
-        expect(Exit.isFailure(exit)).toBe(true)
       }),
     ))
 })
