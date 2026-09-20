@@ -378,7 +378,7 @@ export function AddAlarmWizard({
             ))
             .with(false, () => (
               <Button className="flex-1" disabled={saving} onClick={() => void handleSave()}>
-                この内容で保存する
+                保存
               </Button>
             ))
             .exhaustive()}
