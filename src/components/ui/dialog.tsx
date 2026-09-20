@@ -92,7 +92,14 @@ function DialogContent({
         {showCloseButton && (
           <DialogPrimitive.Close
             data-slot="dialog-close"
-            className="absolute top-4 right-4 rounded-full p-1.5 text-muted-foreground opacity-80 transition-opacity hover:opacity-100 focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none"
+            className={cn(
+              'absolute right-4 rounded-full p-1.5 text-muted-foreground opacity-80 transition-opacity hover:opacity-100 focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none',
+              // 全画面は上端にセーフエリアの余白を持つが、absolute のこのボタンはそれを見ないので自分で足す
+              match(fullScreen)
+                .with(true, () => 'top-[calc(1rem+env(safe-area-inset-top))]')
+                .with(false, () => 'top-4')
+                .exhaustive(),
+            )}
           >
             <X className="size-4" />
             <span className="sr-only">閉じる</span>

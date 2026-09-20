@@ -9,6 +9,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
+import { ViewportProbe } from '@/components/settings/viewport-probe'
 import { useApp } from '@/contexts/app-context'
 import { formatAlarmTime, formatDaysOfWeek } from '@/lib/alarm'
 import { cn } from '@/lib/utils'
@@ -144,6 +145,9 @@ export function DemoPanel() {
                 </div>
               </>
             )}
+
+            <DevGroupHeading>表示領域</DevGroupHeading>
+            <ViewportProbe />
 
             <DevGroupHeading
               trailing={match(log.length)
