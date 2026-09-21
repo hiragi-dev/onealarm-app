@@ -172,6 +172,20 @@
     mix-blend-mode: normal;
   }
 
+  /*
+   * ページの遷移アニメーションを、浮いている下部ナビの手前まで（下端の帯を除いて）で
+   * 切り取る。何もしないと ::view-transition-group(page) は既定でルート（下部ナビを
+   * 含む、動かない側）より手前に描かれる仕様のため、スライドしてくる新しい画面が
+   * 一瞬だけナビの上に覆いかぶさって見えてしまう。
+   * ナビ自体に view-transition-name を付けて手前に固定する手も考えたが、
+   * ナビは backdrop-blur を使っており、これに名前を付けると WebKit で
+   * 独立した描画層になって backdrop-blur が効かなくなる（bottom-nav.tsx 参照）。
+   * そのため触れずに、ページ側の見える範囲をナビの帯の分だけ小さくする側で解決する。
+   */
+  ::view-transition-group(page) {
+    clip-path: inset(0 0 var(--bottom-nav-space) 0);
+  }
+
   html:active-view-transition-type(forward)::view-transition-old(page) {
     animation-name: page-out-to-left;
   }
