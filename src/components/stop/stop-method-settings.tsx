@@ -2,6 +2,7 @@ import { match } from 'ts-pattern'
 import { AlarmClock, MapPin, Plus, Trash2 } from 'lucide-react'
 
 import { InfoPopover } from '@/components/common/info-popover'
+import { TabHeader } from '@/components/layout/tab-header'
 import { StaticMapPreview } from '@/components/map/static-map-preview'
 import { MAP_ATTRIBUTION_TEXT } from '@/components/map/tile-source'
 import { StopMethodDialogs } from '@/components/stop/stop-method-dialogs'
@@ -31,22 +32,24 @@ export function StopMethodSettings() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1">
-          {/* 見出しに「（位置情報）」のような但し書きを足さない。
-              説明は情報ボタンへ寄せ、見出しは名前だけにしておく */}
-          <h1 className="text-3xl font-extrabold tracking-tight">停止方法</h1>
+      <TabHeader
+        title="停止方法"
+        titleExtra={
+          // 見出しに「（位置情報）」のような但し書きを足さない。
+          // 説明は情報ボタンへ寄せ、見出しは名前だけにしておく
           <InfoPopover>
             アラームを止めるために移動する地点です。地図上の地点と、到達とみなす半径で決めます。
             「アラーム」タブでアラームごとに1つ割り当て、鳴っている間にその地点まで移動すると
             自動的に停止します。
           </InfoPopover>
-        </div>
-        <Button onClick={editing.openAdd}>
-          <Plus />
-          追加
-        </Button>
-      </div>
+        }
+        action={
+          <Button onClick={editing.openAdd}>
+            <Plus />
+            追加
+          </Button>
+        }
+      />
 
       {match(editing.rows)
         .with([], () => (

@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 
+import { TabHeader } from '@/components/layout/tab-header'
 import { ConnectionSettings } from '@/components/settings/connection-settings'
 import { DemoPanel } from '@/components/settings/demo-panel'
 import { SensorSettings } from '@/components/settings/sensor-settings'
@@ -20,7 +21,7 @@ export const Route = createFileRoute('/settings')({
 function Settings() {
   return (
     <div className="min-h-0 flex-1 space-y-6 overflow-y-auto pb-nav">
-      <h1 className="text-3xl font-extrabold tracking-tight">設定</h1>
+      <TabHeader title="設定" />
 
       <ConnectionSettings />
 

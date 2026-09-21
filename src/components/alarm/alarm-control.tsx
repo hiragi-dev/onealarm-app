@@ -4,6 +4,7 @@ import { AlarmClockOff, CloudOff, Footprints, MapPin, Plus, RefreshCw } from 'lu
 
 import { AddAlarmWizard } from '@/components/alarm/add-alarm-wizard'
 import { EditAlarmPage } from '@/components/alarm/edit-alarm-page'
+import { TabHeader } from '@/components/layout/tab-header'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -280,23 +281,27 @@ export function AlarmControl() {
 
   return (
     <div className="relative flex h-full flex-col">
-      <div className="flex items-center justify-between pb-2">
-        <h1 className="text-3xl font-extrabold tracking-tight">アラーム</h1>
-        <Button
-          variant="ghost"
-          size="icon-lg"
-          onClick={() => setAddOpen(true)}
-          disabled={!ready || !canAdd}
-          aria-label="アラームを追加"
-          title={
-            match({ ready, canAdd })
-              .with({ ready: true, canAdd: false }, () => '先に「停止」タブで停止方法を登録してください')
-              .otherwise(() => undefined)
+      <div className="pb-2">
+        <TabHeader
+          title="アラーム"
+          action={
+            <Button
+              variant="ghost"
+              size="icon-lg"
+              onClick={() => setAddOpen(true)}
+              disabled={!ready || !canAdd}
+              aria-label="アラームを追加"
+              title={
+                match({ ready, canAdd })
+                  .with({ ready: true, canAdd: false }, () => '先に「停止」タブで停止方法を登録してください')
+                  .otherwise(() => undefined)
+              }
+              className="text-primary"
+            >
+              <Plus className="size-6" />
+            </Button>
           }
-          className="text-primary"
-        >
-          <Plus className="size-6" />
-        </Button>
+        />
       </div>
 
       <Separator />
