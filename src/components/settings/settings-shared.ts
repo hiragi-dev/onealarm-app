@@ -1,6 +1,7 @@
 import type { MqttSettings } from '@/contexts/app-context'
 import type { BrokerStatus, EdgeDeviceStatus } from '@/lib/app-state'
 import type { Tone } from '@/lib/connection-view'
+import { isSecureBrokerUrl } from '@/lib/validation'
 
 /**
  * 「設定」タブが使う文言と選択肢。
@@ -83,6 +84,8 @@ export type MqttField = {
   placeholder: string
   help: string
   type: 'text' | 'password'
+  /** 入力中に赤字で出す注意文言。問題が無ければ null */
+  validate?: (value: string) => string | null
 }
 
 /**
@@ -97,6 +100,11 @@ export const brokerFields: MqttField[] = [
     placeholder: 'wss://xxxxxxxx.s1.eu.hivemq.cloud:8884/mqtt',
     help: 'HiveMQ Cloud の WebSocket エンドポイント（TLS: 8884, パス /mqtt）',
     type: 'text',
+    // ws:// は HTTPS ページの Mixed Content Policy でブラウザに拒否され、原理的に繋がらない
+    validate: (value) =>
+      value !== '' && !isSecureBrokerUrl(value)
+        ? 'wss:// から始まる URL のみ使えます（暗号化されていない接続は拒否されます）'
+        : null,
   },
   {
     key: 'username',

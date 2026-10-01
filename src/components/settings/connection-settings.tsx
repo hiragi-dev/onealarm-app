@@ -242,43 +242,50 @@ function FieldGroup({
 
       {/* 見出しとの間隔はカード側の gap で取るので、ここは行間だけを持つ */}
       <CardContent className="divide-y divide-border">
-        {fields.map((field) => (
-          <div
-            key={field.key}
-            className="flex items-center gap-3"
-            // ラベル側を叩いたときも拾えるよう、行ごと受ける
-            onClick={notifyIfLocked}
-          >
-            <Label
-              htmlFor={`connection-${field.key}`}
-              className="w-24 shrink-0 text-sm text-muted-foreground"
-            >
-              {field.short}
-            </Label>
-            <Input
-              id={`connection-${field.key}`}
-              // 見えるラベルは詰めてあるので、読み上げには正式な名前を渡す
-              aria-label={field.label}
-              type={field.type}
-              value={settings[field.key]}
-              onChange={(e) => updateSetting(field.key, e.target.value)}
-              /* disabled ではなく readOnly。disabled はクリックもキー入力も
-                 イベントを発火しないので「編集しようとした」ことを検知できない。
-                 readOnly なら編集は防いだまま検知でき、値の選択・コピーも残る */
-              readOnly={!editable}
-              onKeyDown={handleLockedKeyDown}
-              placeholder={field.placeholder}
-              autoComplete="off"
-              spellCheck={false}
-              // 行そのものが入力欄。枠を消して右寄せにすると、読むときは
-              // ラベルと値の対応表に、書くときは入力欄に見える
-              className={cn(
-                'h-11 min-w-0 flex-1 rounded-none border-0 bg-transparent px-0 text-right focus-visible:ring-0',
-                !editable && 'opacity-70',
-              )}
-            />
-          </div>
-        ))}
+        {fields.map((field) => {
+          const warning = field.validate?.(settings[field.key]) ?? null
+          return (
+            <div key={field.key} className="py-1.5 first:pt-0 last:pb-0">
+              <div
+                className="flex items-center gap-3"
+                // ラベル側を叩いたときも拾えるよう、行ごと受ける
+                onClick={notifyIfLocked}
+              >
+                <Label
+                  htmlFor={`connection-${field.key}`}
+                  className="w-24 shrink-0 text-sm text-muted-foreground"
+                >
+                  {field.short}
+                </Label>
+                <Input
+                  id={`connection-${field.key}`}
+                  // 見えるラベルは詰めてあるので、読み上げには正式な名前を渡す
+                  aria-label={field.label}
+                  type={field.type}
+                  value={settings[field.key]}
+                  onChange={(e) => updateSetting(field.key, e.target.value)}
+                  /* disabled ではなく readOnly。disabled はクリックもキー入力も
+                     イベントを発火しないので「編集しようとした」ことを検知できない。
+                     readOnly なら編集は防いだまま検知でき、値の選択・コピーも残る */
+                  readOnly={!editable}
+                  onKeyDown={handleLockedKeyDown}
+                  placeholder={field.placeholder}
+                  autoComplete="off"
+                  spellCheck={false}
+                  // 行そのものが入力欄。枠を消して右寄せにすると、読むときは
+                  // ラベルと値の対応表に、書くときは入力欄に見える。
+                  // 枠線を消してあるので invalid の縁取りは効かず、文字色だけで示す
+                  className={cn(
+                    'h-11 min-w-0 flex-1 rounded-none border-0 bg-transparent px-0 text-right focus-visible:ring-0',
+                    !editable && 'opacity-70',
+                    warning && 'text-destructive',
+                  )}
+                />
+              </div>
+              {warning && <p className="pb-1 text-right text-xs text-destructive">{warning}</p>}
+            </div>
+          )
+        })}
       </CardContent>
     </Card>
   )

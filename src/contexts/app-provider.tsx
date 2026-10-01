@@ -24,6 +24,7 @@ import {
   BrokerNotConnectedError,
   errorMessage,
   errorSeverity,
+  InsecureBrokerUrlError,
   RingingLockedError,
   ValidationError,
   type LocationUnavailableError,
@@ -39,6 +40,7 @@ import {
   saveWalkUnlockPoints,
   type WalkUnlockPoints,
 } from '@/lib/storage'
+import { isSecureBrokerUrl } from '@/lib/validation'
 import {
   DUMMY_ALARMS,
   DUMMY_CURRENT_POSITION,
@@ -263,9 +265,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const scope = yield* Scope.make()
         const session = yield* Effect.gen(function* () {
           const fake = yield* makeFake
+          /**
+           * ws:// は HTTPS ページの Mixed Content Policy でブラウザに拒否され、
+           * mqtt.connect() を試すと同期的に例外を投げて止まらなくなる。
+           * 「繋がらない」ではなく「原理的に繋がりようがない」ので、試す前にここで弾く
+           */
           const transport: EdgeTransport = fake
             ? fake.transport
-            : yield* makeMqttTransport({ brokerUrl, username, password })
+            : yield* (
+                isSecureBrokerUrl(brokerUrl)
+                  ? makeMqttTransport({ brokerUrl, username, password })
+                  : Effect.fail(new InsecureBrokerUrlError())
+              )
           const client = yield* makeEdgeClient(transport, {
             deviceId,
             responseTimeout: EDGE_TIMEOUT,

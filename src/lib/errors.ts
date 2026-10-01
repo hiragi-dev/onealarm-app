@@ -54,6 +54,14 @@ export class SensorPermissionError extends Data.TaggedError('SensorPermissionErr
   readonly reason: 'denied' | 'unsupported' | 'insecure'
 }> {}
 
+/**
+ * ブローカー URL が wss:// で始まらない。PWA は HTTPS 配信が前提で、ブラウザの
+ * Mixed Content Policy により暗号化されていない ws:// 接続は拒否される
+ * （「安全でないから避ける」ではなく、原理的に繋がりようがない）ため、
+ * mqtt.connect() を試す前にここで止める
+ */
+export class InsecureBrokerUrlError extends Data.TaggedError('InsecureBrokerUrlError') {}
+
 /** アプリが投げうる失敗の総和 */
 export type AppError =
   | BrokerNotConnectedError
@@ -64,6 +72,7 @@ export type AppError =
   | ValidationError
   | LocationUnavailableError
   | SensorPermissionError
+  | InsecureBrokerUrlError
 
 /**
  * 失敗を利用者向けの日本語メッセージに変換する。
@@ -112,6 +121,10 @@ export const errorMessage = Match.type<AppError>().pipe(
         return '歩行検知には HTTPS（または localhost）でのアクセスが必要です。'
     }
   }),
+  Match.tag(
+    'InsecureBrokerUrlError',
+    () => '暗号化されていない接続（ws://）はブラウザに拒否されます。wss:// から始まる URL を入力してください。',
+  ),
   Match.exhaustive,
 )
 
@@ -120,6 +133,7 @@ export const errorSeverity = Match.type<AppError>().pipe(
   Match.tags({
     ValidationError: () => 'warning' as const,
     RingingLockedError: () => 'warning' as const,
+    InsecureBrokerUrlError: () => 'warning' as const,
   }),
   Match.orElse(() => 'error' as const),
 )

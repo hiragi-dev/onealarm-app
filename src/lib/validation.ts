@@ -20,6 +20,17 @@ import {
 
 const HHMM = /^([01]\d|2[0-3]):([0-5]\d)$/
 
+/**
+ * ブローカー URL が wss:// で始まるか。PWA は HTTPS 配信が前提で、ブラウザの
+ * Mixed Content Policy により暗号化されていない ws:// 接続は拒否される
+ * （「安全でないから避ける」ではなく、原理的に繋がりようがない）ため、
+ * 接続前の確認にも、入力欄の注意表示にもこれ1つを使う。
+ * スキームの大小は区別しない（URI の仕様どおり）
+ */
+export function isSecureBrokerUrl(url: string): boolean {
+  return /^wss:\/\//i.test(url)
+}
+
 /** "HH:MM" 形式の時刻 */
 export const TimeString = Schema.String.pipe(
   Schema.pattern(HHMM, {

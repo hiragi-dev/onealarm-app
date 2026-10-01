@@ -8,6 +8,7 @@ import type {
   BrokerUnreachableError,
   EdgeOfflineError,
   EdgeTimeoutError,
+  InsecureBrokerUrlError,
   LocationUnavailableError,
   RingingLockedError,
   SensorPermissionError,
@@ -35,7 +36,7 @@ export type { CurrentPosition, LocationPermission, MotionValues, MqttSettings, W
 export type LogEntry = { time: string; text: string }
 
 /** 接続が失敗しうる理由 */
-export type ConnectError = BrokerUnreachableError | EdgeTimeoutError
+export type ConnectError = BrokerUnreachableError | EdgeTimeoutError | InsecureBrokerUrlError
 
 /** エッジデバイスへ送るコマンドが失敗しうる理由 */
 export type CommandError = BrokerNotConnectedError | EdgeOfflineError | EdgeTimeoutError
