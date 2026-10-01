@@ -330,6 +330,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [demoEnabled, connect, disconnect])
 
   /**
+   * 起動時に自動で接続する。接続先（ブローカー URL とデバイス ID）が入っていれば、
+   * 起動のたびに手で「接続」を押さずに済むようにする。失敗しても自動では
+   * 再試行せず、立て直しは利用者の「再接続」操作に任せる（失敗を黙って
+   * 繰り返すと、何が起きているか分からないまま待たされるだけになるため）。
+   * dev のデモが有効な間は上の effect が繋ぐので、ここでは何もしない
+   * （マウント時点の値を見れば十分なので、settings 自体は依存に含めない）
+   */
+  React.useEffect(() => {
+    if (demoEnabled) return
+    if (!settings.brokerUrl || !settings.deviceId) return
+    void Effect.runPromise(connect.pipe(Effect.ignore))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  /**
    * バックグラウンドから戻ったら繋ぎ直す。iOS はバックグラウンド中に WebSocket を
    * 止めることがあり、mqtt.js の自動再接続だけでは戻った直後にすぐ繋がらない。
    * 一度でも繋いだ後（セッションがある）に限り、繋がっていなければ作り直す

@@ -36,8 +36,7 @@ export function WalkStatus({
   const { isWalking } = useApp()
 
   return match({ permission, gate })
-    // 許可はふつう最初のタップで取れている（SensorPermissionBridge）。ここに来るのは
-    // まだ一度もタップしていないときだけなので、ボタンではなくタップを促す
+    // iOS は画面操作の中でしか許可を要求できないので、ここで最初のタップを拾う
     .with({ permission: 'prompt' }, () => (
       <Panel>
         <Footprints className="size-16 text-muted-foreground/35" />

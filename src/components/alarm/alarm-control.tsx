@@ -160,9 +160,13 @@ function AlarmRow({
 /**
  * 未接続・エラー時に一覧を覆って操作させないようにするオーバーレイ。
  *
- * 立て直しのボタンをここにも置く。理由だけ並べて設定タブへ行かせると、
- * 失敗のたびにタブを往復することになるため。判断は設定画面のボタンと同じ
- * deriveConnectAction で、押せる状態（connect / reconnect）のときだけ出す。
+ * 起動時は自動で接続を試みる（app-provider.tsx）ので、ここでは「試している最中」と
+ * 「実際に失敗した」を分けて見せる。何も悪いことが起きていない接続試行中や
+ * 応答待ちの間まで赤いエラー表示にすると、起動するたびにエラーを見せることになる。
+ * 赤く「未接続・エラー」と出し、立て直しの「再接続」ボタンを出すのは、
+ * 実際に失敗した（deriveConnectAction が reconnect を返す）ときだけにする。
+ * 立て直しのボタンをここにも置くのは、理由だけ並べて設定タブへ行かせると、
+ * 失敗のたびにタブを往復することになるため。
  */
 function ConnectionOverlay({
   broker,
@@ -171,7 +175,7 @@ function ConnectionOverlay({
   broker: BrokerConnection
   reasons: BlockReason[]
 }) {
-  const { settings, edgeStatus, connect, reconnect } = useApp()
+  const { settings, edgeStatus, reconnect } = useApp()
   const run = useRunEffect()
   const configured = Boolean(settings.brokerUrl && settings.deviceId)
   const action = deriveConnectAction({ broker: broker.kind, edge: edgeStatus, configured })
@@ -181,19 +185,30 @@ function ConnectionOverlay({
     // 「見えている範囲」の中央にカードを置く
     <div className="absolute -inset-4 z-10 flex items-center justify-center rounded-3xl bg-black/50 p-4 pb-[calc(var(--bottom-nav-space)+1rem)] backdrop-blur-sm">
       <div className="w-full max-w-sm rounded-3xl border border-white/10 bg-[rgba(20,23,31,0.85)] px-4 py-8 text-center shadow-2xl backdrop-blur-xl">
-        {match(broker.kind)
-          .with('connecting', () => (
+        {match(action)
+          .with({ kind: 'connect' }, { kind: 'busy' }, () => (
             <>
               <div className="mb-4 inline-flex rounded-full bg-white/6 p-4">
                 <Spinner className="size-8 text-primary" />
               </div>
-              <h2 className="mb-1 text-lg font-extrabold">再接続しています…</h2>
+              <h2 className="mb-1 text-lg font-extrabold">接続しています…</h2>
               <p className="text-sm text-muted-foreground">
-                デバイスへ自動で接続を試みています。しばらくお待ちください。
+                デバイスへの接続を確認しています。しばらくお待ちください。
               </p>
             </>
           ))
-          .otherwise(() => (
+          .with({ kind: 'unconfigured' }, () => (
+            <>
+              <div className="mb-4 inline-flex rounded-full bg-white/6 p-4 text-muted-foreground">
+                <CloudOff className="size-8" />
+              </div>
+              <h2 className="mb-1 text-lg font-extrabold">接続先が未設定です</h2>
+              <p className="text-sm text-muted-foreground">
+                「設定」タブでブローカーとデバイスの接続先を入力してください。
+              </p>
+            </>
+          ))
+          .with({ kind: 'reconnect' }, () => (
             <>
               <div className="mb-4 inline-flex rounded-full bg-destructive/10 p-4 text-destructive">
                 <CloudOff className="size-8" />
@@ -210,22 +225,15 @@ function ConnectionOverlay({
                   </Alert>
                 ))}
               </div>
-              {match(action)
-                .with({ kind: 'connect' }, () => (
-                  <Button className="mt-4 w-full" onClick={() => void run(connect)}>
-                    <RefreshCw />
-                    接続
-                  </Button>
-                ))
-                .with({ kind: 'reconnect' }, () => (
-                  <Button className="mt-4 w-full" onClick={() => void run(reconnect)}>
-                    <RefreshCw />
-                    再接続
-                  </Button>
-                ))
-                .otherwise(() => null)}
+              <Button className="mt-4 w-full" onClick={() => void run(reconnect)}>
+                <RefreshCw />
+                再接続
+              </Button>
             </>
-          ))}
+          ))
+          // 端まで通っていればこのオーバーレイ自体が出ない状態なので、ここには来ない
+          .with({ kind: 'connected' }, () => null)
+          .exhaustive()}
       </div>
     </div>
   )
