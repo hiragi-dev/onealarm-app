@@ -80,7 +80,7 @@ export function RingingTakeover() {
     // 鳴っていなければ何も描かない。平常時はこの画面自体が存在しない
     .with({ kind: 'silent' }, () => null)
     .with({ kind: 'ringing' }, ({ target }) => {
-      var isMuted = false;
+      let isMuted = false;
       if (target.kind == "with-method") {
         isMuted = (target.mute.kind == "muted");
       }
