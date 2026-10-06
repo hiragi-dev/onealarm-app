@@ -5,7 +5,6 @@ import {
   alarmCommandFields,
   encodeAlarmsPayload,
   encodeCommand,
-  encodeRingingPayload,
   parseCommand,
   parseDeviceMessage,
   topicsFor,
@@ -119,7 +118,7 @@ describe('デバイスからの電文', () => {
     const ringing = parseDeviceMessage(
       TOPICS,
       TOPICS.ringingStatus,
-      encodeRingingPayload({ isRinging: true, ringingIds: ['alarm-1'] }),
+      '{"is_ringing":true,"ringing_ids":["alarm-1"]}',
     )
     expect(Either.isRight(ringing)).toBe(true)
     if (Either.isRight(ringing)) {

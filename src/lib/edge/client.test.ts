@@ -143,7 +143,8 @@ describe('接続', () => {
           yield* settle
 
           // 切断中にデバイス側だけが変わる。この publish はどこにも溜まらず消える
-          yield* device.mutate(() => ({
+          yield* device.mutate((s) => ({
+            ...s,
             alarms: [{ ...EXISTING_ALARM, id: 'alarm-added-while-offline', time: '05:00' }],
             ringing: { isRinging: true, ringingIds: ['alarm-added-while-offline'] },
           }))

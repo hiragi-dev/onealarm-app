@@ -1,10 +1,9 @@
-import { Effect, Either, Queue, Ref, type Scope } from 'effect'
+import { Clock, Effect, Either, Queue, Ref, type Scope } from 'effect'
 
 import { sortAlarmsByTime, type Alarm, type RingingStatus } from '@/lib/alarm'
 import { BrokerUnreachableError } from '@/lib/errors'
 import {
   encodeAlarmsPayload,
-  encodeRingingPayload,
   encodeStatusPayload,
   parseCommand,
   toAlarm,
@@ -35,12 +34,20 @@ import type { EdgeTransport, TransportEvent } from '@/lib/edge/transport'
  * - list / ringing_status / status にだけ返事をする
  * - 鳴動中は鳴動状態を自発的に配信する（実機は 1 秒ごと。ここでは状態が変わった時）
  *   が、止まったときは配信しない
+ * - pause を受けると「黙っている期限」を持ち、鳴動状態にその旨を載せて配信する。
+ *   期限切れは時間の経過で起きるので、そのときは何も言わない（下の encodeRingingStatus）
  * こちらも「実機より甘い fake」にならないよう、返さないものは返さない。
  */
 
 export type DeviceState = {
   readonly alarms: readonly Alarm[]
   readonly ringing: RingingStatus
+  /**
+   * pause で黙っている期限（epoch ms）。null は黙っていない。
+   * 実機（onealarm-fw）の g_muteActive / g_muteUntilMs 相当で、アラームごとではなく
+   * 本体に 1 つだけ持つ。pause は上書き式で、送るたびに積み上がることはない
+   */
+  readonly mutedUntil: number | null
 }
 
 export type FakeEdgeOptions = {
@@ -84,6 +91,30 @@ export type FakeEdge = {
 
 const EMPTY_RINGING: RingingStatus = { isRinging: false, ringingIds: [] }
 
+/**
+ * ringing_status の電文（MQTT API v2.1）。
+ *
+ * protocol.ts の encoder を使わず、実機の ArduinoJson と同じく生の JSON を組む。
+ * デバイスはアプリが読む項目より多くを送ってよい側なので、書き手がアプリの Schema を
+ * 共有していると「今のアプリが読める形」しか送れなくなり、項目を増やした実機を
+ * アプリ側だけで追従する流れをテストできない。実機はアプリの型を知らないのだから、
+ * fake もそれに倣って知らないままにしておく。
+ *
+ * 残りの時間は「問われた時点」で数え直す（実機の isMuted() と同じ）。期限切れは
+ * 時間の経過で起きるのでデバイス側に知らせる契機が無く、アプリは定期問い合わせで気づく。
+ */
+function encodeRingingStatus(ringing: RingingStatus, muteRemainingMs: number): string {
+  // 鳴っていないのに黙っている、という状態は意味を持たないので電文では落とす。
+  // 実機の表示も鳴動中にだけ PAUSED と出す（ringing && !isMuted()）
+  const remaining = ringing.isRinging ? muteRemainingMs : 0
+  return JSON.stringify({
+    is_ringing: ringing.isRinging,
+    ringing_ids: [...ringing.ringingIds],
+    is_muted: remaining > 0,
+    mute_remaining_ms: remaining,
+  })
+}
+
 export function makeFakeEdge(
   options: FakeEdgeOptions,
 ): Effect.Effect<FakeEdge, never, Scope.Scope> {
@@ -104,6 +135,7 @@ export function makeFakeEdge(
     const deviceState = yield* Ref.make<DeviceState>({
       alarms: [...(options.alarms ?? [])],
       ringing: options.ringing ?? EMPTY_RINGING,
+      mutedUntil: null,
     })
 
     /** デバイス → アプリ。購読していなければ捨てる。溜めもしない */
@@ -122,7 +154,9 @@ export function makeFakeEdge(
 
     const publishRinging = Effect.gen(function* () {
       const state = yield* Ref.get(deviceState)
-      yield* deliverToApp(topics.ringingStatus, encodeRingingPayload(state.ringing))
+      const now = yield* Clock.currentTimeMillis
+      const remaining = state.mutedUntil === null ? 0 : Math.max(0, state.mutedUntil - now)
+      yield* deliverToApp(topics.ringingStatus, encodeRingingStatus(state.ringing, remaining))
     })
 
     const nextAlarmId = Ref.updateAndGet(alarmSeq, (n) => n + 1).pipe(
@@ -168,8 +202,20 @@ export function makeFakeEdge(
               alarms: s.alarms.filter((a) => a.id !== command.id),
             }))
             return
-          case 'pause':
+          case 'pause': {
+            const now = yield* Clock.currentTimeMillis
+            const state = yield* Ref.get(deviceState)
+            // 実機は鳴っているアラームが無ければ pause を捨てる
+            if (!state.ringing.isRinging) return
+            yield* Ref.set(deviceState, {
+              ...state,
+              // 上書き。duration_ms が 0 以下なら黙るのをやめる
+              mutedUntil: command.duration_ms > 0 ? now + command.duration_ms : null,
+            })
+            // ack は返さない。ただし黙ったことは状態の変化なので、鳴動状態として配信する
+            yield* publishRinging
             return
+          }
           case 'stop':
             yield* Ref.update(deviceState, (s) => ({ ...s, ringing: EMPTY_RINGING }))
             return

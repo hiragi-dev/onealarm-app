@@ -35,6 +35,11 @@ export type DeviceAlarm = Schema.Schema.Type<typeof DeviceAlarmSchema>
 
 export const AlarmsPayloadSchema = Schema.mutable(Schema.Array(DeviceAlarmSchema))
 
+/**
+ * 読む側だけの Schema。ringing_status の書き手は fake-edge.ts にあり、こことは共有しない。
+ * デバイスはアプリが読む項目より多くを送ってよい側なので、書き手を同じ Schema に
+ * 縛ると「今のアプリが読める形」しか送れないデバイスになってしまう
+ */
 export const RingingStatusPayloadSchema = Schema.Struct({
   is_ringing: Schema.Boolean,
   ringing_ids: Schema.mutable(Schema.Array(Schema.String)),
@@ -124,7 +129,6 @@ const decodeAlarms = Schema.decodeUnknownEither(Schema.parseJson(AlarmsPayloadSc
 const decodeRinging = Schema.decodeUnknownEither(Schema.parseJson(RingingStatusPayloadSchema))
 const decodeStatus = Schema.decodeUnknownEither(Schema.parseJson(StatusPayloadSchema))
 const encodeAlarmsSync = Schema.encodeSync(Schema.parseJson(AlarmsPayloadSchema))
-const encodeRingingSync = Schema.encodeSync(Schema.parseJson(RingingStatusPayloadSchema))
 const encodeStatusSync = Schema.encodeSync(Schema.parseJson(StatusPayloadSchema))
 
 export function encodeCommand(command: Command): string {
@@ -177,10 +181,6 @@ export function encodeAlarmsPayload(alarms: readonly Alarm[]): string {
       stop_method_id: a.stopMethodId,
     })),
   )
-}
-
-export function encodeRingingPayload(ringing: RingingStatus): string {
-  return encodeRingingSync({ is_ringing: ringing.isRinging, ringing_ids: [...ringing.ringingIds] })
 }
 
 export function encodeStatusPayload(online: boolean): string {
