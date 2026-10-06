@@ -48,7 +48,11 @@ export default defineConfig({
       registerType: 'autoUpdate',
       // 登録は SwStatus (useRegisterSW) 側で行うため自動注入は無効化する。
       injectRegister: null,
-      includeAssets: ['favicon.svg', 'apple-touch-icon-180x180.png'],
+      includeAssets: [
+        'favicon-16x16.png',
+        'favicon-32x32.png',
+        'apple-touch-icon-180x180.png',
+      ],
       manifest: {
         id: base,
         name: 'OneAlarm',

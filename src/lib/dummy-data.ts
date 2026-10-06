@@ -36,27 +36,27 @@ export const DUMMY_MQTT_SETTINGS = import.meta.env.DEV
 
 export const DUMMY_STOP_METHODS: StopMethod[] = [
   {
-    id: 'sm-office',
-    label: '会社',
+    id: 'sm-store',
+    label: 'コンビニ',
     lat: 35.6812,
     lng: 139.7671,
-    radiusMeters: 30,
+    radiusMeters: 25,
     createdAt: Date.parse('2026-06-01T09:00:00+09:00'),
+  },
+  {
+    id: 'sm-mailbox',
+    label: '集合ポスト',
+    lat: 35.6803,
+    lng: 139.7653,
+    radiusMeters: 20,
+    createdAt: Date.parse('2026-06-03T08:12:00+09:00'),
   },
   {
     id: 'sm-station',
     label: '最寄り駅',
-    lat: 35.658,
-    lng: 139.7016,
+    lat: 35.684,
+    lng: 139.77,
     radiusMeters: 50,
-    createdAt: Date.parse('2026-06-03T08:12:00+09:00'),
-  },
-  {
-    id: 'sm-convenience',
-    label: 'コンビニ',
-    lat: 35.6895,
-    lng: 139.6917,
-    radiusMeters: 15,
     createdAt: Date.parse('2026-07-11T22:40:00+09:00'),
   },
 ]
@@ -64,28 +64,20 @@ export const DUMMY_STOP_METHODS: StopMethod[] = [
 export const DUMMY_ALARMS: Alarm[] = [
   {
     id: 'alarm-weekday',
-    time: '06:30',
+    time: '07:00',
     daysOfWeek: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
     isEnabled: true,
-    stopMethodId: 'sm-office',
-    walkUnlockPointId: null,
+    stopMethodId: 'sm-store',
+    // 家を出てすぐの地点。ここに着くまで歩行検知が働かない
+    walkUnlockPointId: 'sm-mailbox',
   },
   {
     id: 'alarm-weekend',
-    time: '08:45',
+    time: '08:30',
     daysOfWeek: ['Sat', 'Sun'],
-    isEnabled: false,
-    stopMethodId: 'sm-convenience',
-    walkUnlockPointId: null,
-  },
-  {
-    id: 'alarm-daily',
-    time: '22:00',
-    daysOfWeek: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
     isEnabled: true,
-    stopMethodId: 'sm-station',
-    // 「コンビニに着くまで歩行検知が働かない」見え方を確認するための1件
-    walkUnlockPointId: 'sm-convenience',
+    stopMethodId: 'sm-store',
+    walkUnlockPointId: null,
   },
 ]
 
@@ -99,7 +91,7 @@ export const DUMMY_LOG: { time: string; text: string }[] = import.meta.env.DEV
       { time: '07:12:04', text: 'subscribe eager-alarm/onealarm-demo-01/status' },
       { time: '07:12:04', text: 'subscribe eager-alarm/onealarm-demo-01/alarms' },
       { time: '07:12:05', text: 'publish {"type":"list"}' },
-      { time: '07:12:05', text: 'recv alarms: 3件' },
+      { time: '07:12:05', text: 'recv alarms: 2件' },
       { time: '07:12:08', text: 'recv status: {"online":true}' },
     ]
   : []

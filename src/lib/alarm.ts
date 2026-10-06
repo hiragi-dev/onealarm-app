@@ -1,3 +1,5 @@
+import type { Int } from "effect/Schema"
+
 export type DayOfWeek = 'Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri' | 'Sat' | 'Sun'
 
 export const ALL_DAYS: DayOfWeek[] = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
@@ -40,9 +42,15 @@ export function usesStopMethod(alarm: Alarm, stopMethodId: string): boolean {
   return alarm.stopMethodId === stopMethodId || alarm.walkUnlockPointId === stopMethodId
 }
 
+export type MuteState =
+  | { kind: 'unknown' }
+  | { kind: 'sounding' }
+  | { kind: 'muted'; remainingMs: number }
+
 export type RingingStatus = {
   isRinging: boolean
   ringingIds: string[]
+  mute: MuteState
 }
 
 /** 時刻が早い順に並べ替える（"HH:MM" 形式の文字列比較） */
