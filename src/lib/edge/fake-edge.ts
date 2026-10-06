@@ -89,7 +89,7 @@ export type FakeEdge = {
   readonly broker: FakeBroker
 }
 
-const EMPTY_RINGING: RingingStatus = { isRinging: false, ringingIds: [] }
+const EMPTY_RINGING: RingingStatus = { isRinging: false, ringingIds: [], mute: { kind: "unknown" } }
 
 /**
  * ringing_status の電文（MQTT API v2.1）。
@@ -156,6 +156,7 @@ export function makeFakeEdge(
       const state = yield* Ref.get(deviceState)
       const now = yield* Clock.currentTimeMillis
       const remaining = state.mutedUntil === null ? 0 : Math.max(0, state.mutedUntil - now)
+
       yield* deliverToApp(topics.ringingStatus, encodeRingingStatus(state.ringing, remaining))
     })
 

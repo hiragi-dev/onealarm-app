@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import type { Alarm } from '@/lib/alarm'
+import type { Alarm, MuteState, RingingStatus } from '@/lib/alarm'
 import { deriveRingingView } from '@/lib/ringing-view'
 import type { StopMethod } from '@/lib/stop-method'
 
@@ -30,7 +30,17 @@ const ALARM: Alarm = {
   walkUnlockPointId: null,
 }
 
-const ringing = (ids: string[]) => ({ isRinging: ids.length > 0, ringingIds: ids })
+const ringing = (ids: string[]): RingingStatus => {
+  const isRinging = ids.length > 0;
+  let mute: MuteState;
+  if (isRinging) {
+    mute = { kind: "sounding" }
+  } else {
+    mute = { kind: "unknown" }
+  }
+
+  return { isRinging, ringingIds: ids, mute }
+}
 
 describe('deriveRingingView', () => {
   it('鳴っていなければ silent（＝停止画面を出さない）', () => {
