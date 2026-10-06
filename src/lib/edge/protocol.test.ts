@@ -118,13 +118,14 @@ describe('デバイスからの電文', () => {
     const ringing = parseDeviceMessage(
       TOPICS,
       TOPICS.ringingStatus,
-      '{"is_ringing":true,"ringing_ids":["alarm-1"]}',
+      '{"is_ringing":true,"ringing_ids":["alarm-1"],"is_muted":true, "mute_remaining_ms":4000}',
     )
+
     expect(Either.isRight(ringing)).toBe(true)
     if (Either.isRight(ringing)) {
       expect(ringing.right).toEqual({
         kind: 'ringing',
-        ringing: { isRinging: true, ringingIds: ['alarm-1'] },
+        ringing: { isRinging: true, ringingIds: ['alarm-1'], mute: { kind: "muted", remainingMs: 4000 } },
       })
     }
 

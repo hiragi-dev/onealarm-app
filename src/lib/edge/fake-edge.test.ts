@@ -30,7 +30,7 @@ const ALARM: Alarm = {
   walkUnlockPointId: null,
 }
 
-const RINGING: RingingStatus = { isRinging: true, ringingIds: [ALARM.id] }
+const RINGING: RingingStatus = { isRinging: true, ringingIds: [ALARM.id], mute: { kind: "sounding" } }
 
 type Fixture = {
   readonly send: (command: Command) => Effect.Effect<void>

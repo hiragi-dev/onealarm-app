@@ -273,10 +273,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           const transport: EdgeTransport = fake
             ? fake.transport
             : yield* (
-                isSecureBrokerUrl(brokerUrl)
-                  ? makeMqttTransport({ brokerUrl, username, password })
-                  : Effect.fail(new InsecureBrokerUrlError())
-              )
+              isSecureBrokerUrl(brokerUrl)
+                ? makeMqttTransport({ brokerUrl, username, password })
+                : Effect.fail(new InsecureBrokerUrlError())
+            )
           const client = yield* makeEdgeClient(transport, {
             deviceId,
             responseTimeout: EDGE_TIMEOUT,
@@ -561,10 +561,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setDemoPosition((prev) =>
         prev
           ? {
-              lat: prev.lat + jitter(0.00008),
-              lng: prev.lng + jitter(0.00008),
-              accuracy: 8 + Math.random() * 10,
-            }
+            lat: prev.lat + jitter(0.00008),
+            lng: prev.lng + jitter(0.00008),
+            accuracy: 8 + Math.random() * 10,
+          }
           : DUMMY_CURRENT_POSITION,
       )
     }, 3000)
@@ -598,7 +598,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       dropConnection: () => withFake((fake) => fake.broker.dropConnection),
       startRinging: (alarmId) =>
         withFake((fake) =>
-          fake.device.mutate((s) => ({ ...s, ringing: { isRinging: true, ringingIds: [alarmId] } })),
+          fake.device.mutate((s) => ({ ...s, ringing: { isRinging: true, ringingIds: [alarmId], mute: { kind: "sounding" } } })),
         ),
       setWalking: setDemoWalking,
       reset: () => {
