@@ -1,4 +1,4 @@
-import type { Alarm, RingingStatus } from '@/lib/alarm'
+import type { Alarm, MuteState, RingingStatus } from '@/lib/alarm'
 import { distanceMeters, type GeoPoint } from '@/lib/geo'
 import type { StopMethod } from '@/lib/stop-method'
 
@@ -14,20 +14,21 @@ import type { StopMethod } from '@/lib/stop-method'
 export type RingingTarget =
   | { kind: 'no-method' }
   | {
-      kind: 'with-method'
-      stopMethod: StopMethod
-      /** 停止地点までの距離（メートル）。現在地が未取得なら null（測位待ち） */
-      distanceToTarget: number | null
-      hasArrived: boolean
-      /**
-       * 距離の算出に使った実効現在地。未取得なら null。
-       * 地図に現在地を打つには座標そのものが要るので、距離と併せて外に出す。
-       */
-      position: GeoPoint | null
-    }
+    kind: 'with-method'
+    stopMethod: StopMethod
+    /** 停止地点までの距離（メートル）。現在地が未取得なら null（測位待ち） */
+    distanceToTarget: number | null
+    hasArrived: boolean
+    /**
+     * 距離の算出に使った実効現在地。未取得なら null。
+     * 地図に現在地を打つには座標そのものが要るので、距離と併せて外に出す。
+     */
+    position: GeoPoint | null
+    mute: MuteState
+  }
 
 /** 鳴動停止画面の表示状態 */
-export type RingingView = { kind: 'silent' } | { kind: 'ringing'; target: RingingTarget }
+export type RingingView = { kind: 'silent' } | { kind: 'ringing'; target: RingingTarget; }
 
 export type RingingViewInput = {
   ringingStatus: RingingStatus | null
@@ -60,6 +61,7 @@ export function deriveRingingView(input: RingingViewInput): RingingView {
       distanceToTarget,
       hasArrived,
       position: input.position,
+      mute: input.ringingStatus!.mute
     },
   }
 }

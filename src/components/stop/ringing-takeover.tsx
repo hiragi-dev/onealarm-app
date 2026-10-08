@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { match, P } from 'ts-pattern'
-import { BellRing, MapPin } from 'lucide-react'
+import { BellRing, MapPin, VolumeX } from 'lucide-react'
 
 import { RingingMiniMap } from '@/components/map/ringing-mini-map'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -17,6 +17,7 @@ import { errorMessage, LocationUnavailableError } from '@/lib/errors'
 import { formatDistance } from '@/lib/geo'
 import { deriveRingingView, type RingingTarget } from '@/lib/ringing-view'
 import { deriveWalkGate } from '@/lib/walk-gate'
+import { Match } from 'effect'
 
 /**
  * 鳴動中だけ画面全体（下部ナビも含む）を覆う停止画面。
@@ -79,125 +80,135 @@ export function RingingTakeover() {
   return match(view)
     // 鳴っていなければ何も描かない。平常時はこの画面自体が存在しない
     .with({ kind: 'silent' }, () => null)
-    .with({ kind: 'ringing' }, ({ target }) => (
-      <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(10,10,12,0.97)] backdrop-blur-xl animate-in fade-in-0">
-        {/* body の外に fixed で描かれるので、セーフエリアの余白を自分で持つ */}
-        <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-6 pt-[calc(2rem+env(safe-area-inset-top))] pb-[calc(2rem+env(safe-area-inset-bottom))]">
-          {/* 鳴動中であることの見出し。状態なので見出し文ではなくチップにする */}
-          <div>
-            <Badge variant="warning" className="gap-1.5 px-3.5 py-1.5 text-sm [&>svg]:size-4">
-              <BellRing className="animate-pulse" />
-              アラームが鳴っています
-            </Badge>
-          </div>
+    .with({ kind: 'ringing' }, ({ target }) => {
+      let isMuted = false;
+      if (target.kind == "with-method") {
+        isMuted =
+          match(target.mute.kind)
+            .with("muted", () => true)
+            .otherwise(() => false);
+      }
+      return (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(10,10,12,0.97)] backdrop-blur-xl animate-in fade-in-0">
+          {/* body の外に fixed で描かれるので、セーフエリアの余白を自分で持つ */}
+          <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-6 pt-[calc(2rem+env(safe-area-inset-top))] pb-[calc(2rem+env(safe-area-inset-bottom))]">
+            {/* 鳴動中であることの見出し。状態なので見出し文ではなくチップにする */}
+            <div>
+              <Badge variant="warning" className="gap-1.5 px-3.5 py-1.5 text-sm [&>svg]:size-4">
+                {
+                  match(isMuted).with(true, () => <div><VolumeX /> ミュート状態です</div>).otherwise(() => < BellRing className="animate-pulse" />)
+                }
+              </Badge>
+            </div>
 
-          {alarmManagement.kind === 'blocked' && (
-            <Alert variant="warning">
-              <AlertDescription>
-                {alarmManagement.reasons.map(blockReasonLabel).join(' / ')}
-              </AlertDescription>
-            </Alert>
-          )}
+            {alarmManagement.kind === 'blocked' && (
+              <Alert variant="warning">
+                <AlertDescription>
+                  {alarmManagement.reasons.map(blockReasonLabel).join(' / ')}
+                </AlertDescription>
+              </Alert>
+            )}
 
-          {/* 歩行検知状況。鳴動中に一番大きく出す */}
-          <WalkStatus
-            gate={walkGate}
-            permission={walkPermission}
-            onRequestPermission={() => void run(requestWalkPermission)}
-          />
+            {/* 歩行検知状況。鳴動中に一番大きく出す */}
+            <WalkStatus
+              gate={walkGate}
+              permission={walkPermission}
+              onRequestPermission={() => void run(requestWalkPermission)}
+            />
 
-          <StopTarget target={target} locationPermission={locationPermission} />
+            <StopTarget target={target} locationPermission={locationPermission} />
 
-          {/* 実際に停止地点まで移動せずに到達検知フローを試すためのデバッグ操作。
+            {/* 実際に停止地点まで移動せずに到達検知フローを試すためのデバッグ操作。
               疑似現在地は ArrivalStopBridge が停止を確認でき次第、自動的に解除する。 */}
-          {import.meta.env.DEV && (
-            <Card className="border-dashed border-warning/50">
-              <CardContent className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <Badge variant="warning">開発用</Badge>
-                  <span className="text-xs text-muted-foreground">本番ビルドには含まれません</span>
-                </div>
-                {/* 実機で歩きながら試すときの手がかり。返事の無い pause が送れているか、
+            {import.meta.env.DEV && (
+              <Card className="border-dashed border-warning/50">
+                <CardContent className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="warning">開発用</Badge>
+                    <span className="text-xs text-muted-foreground">本番ビルドには含まれません</span>
+                  </div>
+                  {/* 実機で歩きながら試すときの手がかり。返事の無い pause が送れているか、
                     解除地点の判定がどうなっているかを、この画面から離れずに読めるようにする */}
-                <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                  <dt>歩行検知</dt>
-                  <dd className="font-mono">
-                    {match(walkGate)
-                      .with({ kind: 'open' }, () => '有効')
-                      .with({ kind: 'locked' }, (g) => `無効（${g.point.label} まで ${formatDistance(g.distance)}）`)
-                      .exhaustive()}
-                  </dd>
-                  <dt>歩行</dt>
-                  <dd className="font-mono">
-                    {match(isWalking)
-                      .with(true, () => '歩行中')
-                      .with(false, () => '静止中')
-                      .exhaustive()}
-                  </dd>
-                  <dt>一時停止の送信</dt>
-                  <dd className="font-mono">
-                    {pauseStats.count} 回
-                    {pauseStats.lastAt !== null &&
-                      `（最終 ${new Date(pauseStats.lastAt).toLocaleTimeString('ja-JP', { hour12: false })}）`}
-                  </dd>
-                  <dt>現在地</dt>
-                  <dd className="font-mono">
-                    {match({ simulatedPosition, realPosition })
-                      .with({ simulatedPosition: P.not(null) }, () => '疑似')
-                      .with({ realPosition: P.not(null) }, ({ realPosition: p }) => `±${Math.round(p.accuracy)} m`)
-                      .otherwise(() => '未取得')}
-                  </dd>
-                </dl>
-                <div className="flex flex-col items-start gap-2">
-                  {/* ダミーのセンサーのときは、開発機を振っても歩行中にならないので手で切り替える。
+                  <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                    <dt>歩行検知</dt>
+                    <dd className="font-mono">
+                      {match(walkGate)
+                        .with({ kind: 'open' }, () => '有効')
+                        .with({ kind: 'locked' }, (g) => `無効（${g.point.label} まで ${formatDistance(g.distance)}）`)
+                        .exhaustive()}
+                    </dd>
+                    <dt>歩行</dt>
+                    <dd className="font-mono">
+                      {match(isWalking)
+                        .with(true, () => '歩行中')
+                        .with(false, () => '静止中')
+                        .exhaustive()}
+                    </dd>
+                    <dt>一時停止の送信</dt>
+                    <dd className="font-mono">
+                      {pauseStats.count} 回
+                      {pauseStats.lastAt !== null &&
+                        `（最終 ${new Date(pauseStats.lastAt).toLocaleTimeString('ja-JP', { hour12: false })}）`}
+                    </dd>
+                    <dt>現在地</dt>
+                    <dd className="font-mono">
+                      {match({ simulatedPosition, realPosition })
+                        .with({ simulatedPosition: P.not(null) }, () => '疑似')
+                        .with({ realPosition: P.not(null) }, ({ realPosition: p }) => `±${Math.round(p.accuracy)} m`)
+                        .otherwise(() => '未取得')}
+                    </dd>
+                  </dl>
+                  <div className="flex flex-col items-start gap-2">
+                    {/* ダミーのセンサーのときは、開発機を振っても歩行中にならないので手で切り替える。
                       本物のセンサーを使っているときは効かないので押せなくする */}
-                  <Button
-                    variant="outline"
-                    disabled={!demo.enabled || demo.realSensors}
-                    onClick={() => demo.setWalking(!isWalking)}
-                  >
-                    {match(isWalking)
-                      .with(true, () => '静止中にする')
-                      .with(false, () => '歩行中にする')
-                      .exhaustive()}
-                  </Button>
-                  {walkGate.kind === 'locked' && (
                     <Button
                       variant="outline"
-                      disabled={!!simulatedPosition}
-                      onClick={() =>
-                        setSimulatedPosition({ lat: walkGate.point.lat, lng: walkGate.point.lng })
-                      }
+                      disabled={!demo.enabled || demo.realSensors}
+                      onClick={() => demo.setWalking(!isWalking)}
                     >
-                      歩行検知の解除地点まで移動したことにする
+                      {match(isWalking)
+                        .with(true, () => '静止中にする')
+                        .with(false, () => '歩行中にする')
+                        .exhaustive()}
                     </Button>
-                  )}
-                  {target.kind === 'with-method' && (
-                    <Button
-                      variant="outline"
-                      disabled={!!simulatedPosition}
-                      onClick={() =>
-                        setSimulatedPosition({
-                          lat: target.stopMethod.lat,
-                          lng: target.stopMethod.lng,
-                        })
-                      }
-                    >
-                      この停止方法の位置まで移動したことにする
-                    </Button>
-                  )}
-                  {/* 到達判定を経由せずに鳴動を止める強制停止。
+                    {walkGate.kind === 'locked' && (
+                      <Button
+                        variant="outline"
+                        disabled={!!simulatedPosition}
+                        onClick={() =>
+                          setSimulatedPosition({ lat: walkGate.point.lat, lng: walkGate.point.lng })
+                        }
+                      >
+                        歩行検知の解除地点まで移動したことにする
+                      </Button>
+                    )}
+                    {target.kind === 'with-method' && (
+                      <Button
+                        variant="outline"
+                        disabled={!!simulatedPosition}
+                        onClick={() =>
+                          setSimulatedPosition({
+                            lat: target.stopMethod.lat,
+                            lng: target.stopMethod.lng,
+                          })
+                        }
+                      >
+                        この停止方法の位置まで移動したことにする
+                      </Button>
+                    )}
+                    {/* 到達判定を経由せずに鳴動を止める強制停止。
                       停止方法が未設定のアラームでも試せるよう常に出す */}
-                  <Button variant="outline" onClick={() => void run(sendStopCommand)}>
-                    強制停止（stop コマンドを直接送信）
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+                    <Button variant="outline" onClick={() => void run(sendStopCommand)}>
+                      強制停止（stop コマンドを直接送信）
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         </div>
-      </div>
-    ))
+      )
+    })
     .exhaustive()
 }
 

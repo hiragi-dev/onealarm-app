@@ -108,7 +108,9 @@ describe('接続', () => {
           expect(state.broker).toBe('connected')
           expect(state.edge).toBe('online')
           expect(state.alarms.map((a) => a.id)).toEqual([EXISTING_ALARM.id])
-          expect(state.ringing).toEqual({ isRinging: false, ringingIds: [] })
+          expect(state.ringing).toEqual({
+            isRinging: false, ringingIds: [], mute: { kind: "sounding" }
+          })
           expect(state.syncedAt).not.toBeNull()
         }),
       { alarms: [EXISTING_ALARM] },
@@ -146,7 +148,7 @@ describe('接続', () => {
           yield* device.mutate((s) => ({
             ...s,
             alarms: [{ ...EXISTING_ALARM, id: 'alarm-added-while-offline', time: '05:00' }],
-            ringing: { isRinging: true, ringingIds: ['alarm-added-while-offline'] },
+            ringing: { isRinging: true, ringingIds: ['alarm-added-while-offline'], mute: { kind: "sounding" } },
           }))
           yield* settle
 
@@ -163,6 +165,7 @@ describe('接続', () => {
           expect(online.ringing).toEqual({
             isRinging: true,
             ringingIds: ['alarm-added-while-offline'],
+            mute: { kind: "sounding" }
           })
         }),
       { alarms: [EXISTING_ALARM] },
@@ -353,18 +356,20 @@ describe('鳴動', () => {
 
           yield* device.mutate((s) => ({
             ...s,
-            ringing: { isRinging: true, ringingIds: [EXISTING_ALARM.id] },
+            ringing: { isRinging: true, ringingIds: [EXISTING_ALARM.id], mute: { kind: "sounding" } },
           }))
           yield* settle
+
           expect((yield* read).ringing).toEqual({
             isRinging: true,
             ringingIds: [EXISTING_ALARM.id],
+            mute: { kind: "sounding" }
           })
 
           yield* client.stopRinging
           // 実機は stop に返事をしないので、直後の ringing_status で締める
           expect((yield* receivedTypes).slice(-2)).toEqual(['stop', 'ringing_status'])
-          expect((yield* read).ringing).toEqual({ isRinging: false, ringingIds: [] })
+          expect((yield* read).ringing).toEqual({ isRinging: false, ringingIds: [], mute: { kind: "sounding" } })
         }),
       { alarms: [EXISTING_ALARM] },
     ))
@@ -376,13 +381,13 @@ describe('鳴動', () => {
           yield* client.connect
           yield* device.mutate((s) => ({
             ...s,
-            ringing: { isRinging: true, ringingIds: [EXISTING_ALARM.id] },
+            ringing: { isRinging: true, ringingIds: [EXISTING_ALARM.id], mute: { kind: "sounding" } },
           }))
           yield* settle
           expect((yield* read).ringing?.isRinging).toBe(true)
 
           // 本体のボタンで止まった。配信は無い
-          yield* device.mutate((s) => ({ ...s, ringing: { isRinging: false, ringingIds: [] } }))
+          yield* device.mutate((s) => ({ ...s, ringing: { isRinging: false, ringingIds: [], mute: { kind: "sounding" } } }))
           yield* settle
           expect((yield* read).ringing?.isRinging).toBe(true)
 
