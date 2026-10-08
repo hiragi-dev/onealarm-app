@@ -157,4 +157,20 @@ describe('デバイスからの電文', () => {
     expect(Either.isLeft(parseDeviceMessage(TOPICS, TOPICS.ringingStatus, '{}'))).toBe(true)
     expect(Either.isLeft(parseDeviceMessage(TOPICS, 'eager-alarm/dev-1/other', '{}'))).toBe(true)
   })
+
+  it('mute状態をringing_statusでfbする機能導入に対する前方互換性の保証', () => {
+    const ringing = parseDeviceMessage(
+      TOPICS,
+      TOPICS.ringingStatus,
+      '{"is_ringing":true,"ringing_ids":["alarm-1"]}',
+    )
+
+    expect(Either.isRight(ringing)).toBe(true)
+    if (Either.isRight(ringing)) {
+      expect(ringing.right).toEqual({
+        kind: 'ringing',
+        ringing: { isRinging: true, ringingIds: ['alarm-1'], mute: { kind: "sounding" } },
+      })
+    }
+  })
 })

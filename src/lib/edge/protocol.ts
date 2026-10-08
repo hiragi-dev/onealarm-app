@@ -43,8 +43,8 @@ export const AlarmsPayloadSchema = Schema.mutable(Schema.Array(DeviceAlarmSchema
 export const RingingStatusPayloadSchema = Schema.Struct({
   is_ringing: Schema.Boolean,
   ringing_ids: Schema.mutable(Schema.Array(Schema.String)),
-  is_muted: Schema.Boolean,
-  mute_remaining_ms: Schema.Number,
+  is_muted: Schema.optionalWith(Schema.Boolean, { exact: true }),
+  mute_remaining_ms: Schema.optionalWith(Schema.Number, { exact: true }),
 })
 
 export const StatusPayloadSchema = Schema.Struct({ online: Schema.Boolean })
@@ -162,7 +162,9 @@ export function parseDeviceMessage(
     case topics.ringingStatus:
       return Either.map(decodeRinging(payload), (r) => {
         if (r.is_ringing) {
-          if (!r.is_muted) {
+          let is_muted = r.is_muted ?? false;
+
+          if (!is_muted) {
             return {
               kind: 'ringing',
               ringing: { isRinging: r.is_ringing, ringingIds: r.ringing_ids, mute: { kind: "sounding" } },
@@ -170,7 +172,7 @@ export function parseDeviceMessage(
           } else {
             return {
               kind: 'ringing',
-              ringing: { isRinging: r.is_ringing, ringingIds: r.ringing_ids, mute: { kind: "muted", remainingMs: r.mute_remaining_ms } },
+              ringing: { isRinging: r.is_ringing, ringingIds: r.ringing_ids, mute: { kind: "muted", remainingMs: r.mute_remaining_ms! } },
             }
           }
         } else {
