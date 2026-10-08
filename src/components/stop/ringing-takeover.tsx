@@ -17,6 +17,7 @@ import { errorMessage, LocationUnavailableError } from '@/lib/errors'
 import { formatDistance } from '@/lib/geo'
 import { deriveRingingView, type RingingTarget } from '@/lib/ringing-view'
 import { deriveWalkGate } from '@/lib/walk-gate'
+import { Match } from 'effect'
 
 /**
  * 鳴動中だけ画面全体（下部ナビも含む）を覆う停止画面。
@@ -82,7 +83,10 @@ export function RingingTakeover() {
     .with({ kind: 'ringing' }, ({ target }) => {
       let isMuted = false;
       if (target.kind == "with-method") {
-        isMuted = (target.mute.kind == "muted");
+        isMuted =
+          match(target.mute.kind)
+            .with("muted", () => true)
+            .otherwise(() => false);
       }
       return (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(10,10,12,0.97)] backdrop-blur-xl animate-in fade-in-0">
@@ -91,9 +95,9 @@ export function RingingTakeover() {
             {/* 鳴動中であることの見出し。状態なので見出し文ではなくチップにする */}
             <div>
               <Badge variant="warning" className="gap-1.5 px-3.5 py-1.5 text-sm [&>svg]:size-4">
-                {isMuted ?
-                  <VolumeX /> :
-                  < BellRing className="animate-pulse" />}
+                {
+                  match(isMuted).with(true, () => <div><VolumeX /> ミュート状態です</div>).otherwise(() => < BellRing className="animate-pulse" />)
+                }
               </Badge>
             </div>
 
