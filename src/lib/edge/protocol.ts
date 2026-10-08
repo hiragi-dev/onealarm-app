@@ -178,7 +178,7 @@ export function parseDeviceMessage(
         } else {
           return {
             kind: 'ringing',
-            ringing: { isRinging: false, ringingIds: r.ringing_ids, mute: { kind: "unknown" } },
+            ringing: { isRinging: false, ringingIds: r.ringing_ids, mute: { kind: "sounding" } },
           }
         }
       })

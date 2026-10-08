@@ -109,7 +109,7 @@ describe('接続', () => {
           expect(state.edge).toBe('online')
           expect(state.alarms.map((a) => a.id)).toEqual([EXISTING_ALARM.id])
           expect(state.ringing).toEqual({
-            isRinging: false, ringingIds: [], mute: { kind: "unknown" }
+            isRinging: false, ringingIds: [], mute: { kind: "sounding" }
           })
           expect(state.syncedAt).not.toBeNull()
         }),
@@ -369,7 +369,7 @@ describe('鳴動', () => {
           yield* client.stopRinging
           // 実機は stop に返事をしないので、直後の ringing_status で締める
           expect((yield* receivedTypes).slice(-2)).toEqual(['stop', 'ringing_status'])
-          expect((yield* read).ringing).toEqual({ isRinging: false, ringingIds: [], mute: { kind: "unknown" } })
+          expect((yield* read).ringing).toEqual({ isRinging: false, ringingIds: [], mute: { kind: "sounding" } })
         }),
       { alarms: [EXISTING_ALARM] },
     ))
