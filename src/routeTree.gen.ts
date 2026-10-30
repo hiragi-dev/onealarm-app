@@ -12,6 +12,8 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as StopRouteImport } from './routes/stop'
+import { Route as DevDayPickerRouteImport } from './routes/dev.day-picker'
+import { Route as DevStopMethodStepRouteImport } from './routes/dev.stop-method-step'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -28,35 +30,60 @@ const StopRoute = StopRouteImport.update({
   path: '/stop',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DevDayPickerRoute = DevDayPickerRouteImport.update({
+  id: '/dev/day-picker',
+  path: '/dev/day-picker',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DevStopMethodStepRoute = DevStopMethodStepRouteImport.update({
+  id: '/dev/stop-method-step',
+  path: '/dev/stop-method-step',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/settings': typeof SettingsRoute
   '/stop': typeof StopRoute
+  '/dev/day-picker': typeof DevDayPickerRoute
+  '/dev/stop-method-step': typeof DevStopMethodStepRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/settings': typeof SettingsRoute
   '/stop': typeof StopRoute
+  '/dev/day-picker': typeof DevDayPickerRoute
+  '/dev/stop-method-step': typeof DevStopMethodStepRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/settings': typeof SettingsRoute
   '/stop': typeof StopRoute
+  '/dev/day-picker': typeof DevDayPickerRoute
+  '/dev/stop-method-step': typeof DevStopMethodStepRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/settings' | '/stop'
+  fullPaths:
+    '/' | '/settings' | '/stop' | '/dev/day-picker' | '/dev/stop-method-step'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/settings' | '/stop'
-  id: '__root__' | '/' | '/settings' | '/stop'
+  to: '/' | '/settings' | '/stop' | '/dev/day-picker' | '/dev/stop-method-step'
+  id:
+    | '__root__'
+    | '/'
+    | '/settings'
+    | '/stop'
+    | '/dev/day-picker'
+    | '/dev/stop-method-step'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   SettingsRoute: typeof SettingsRoute
   StopRoute: typeof StopRoute
+  DevDayPickerRoute: typeof DevDayPickerRoute
+  DevStopMethodStepRoute: typeof DevStopMethodStepRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -82,6 +109,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StopRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dev/day-picker': {
+      id: '/dev/day-picker'
+      path: '/dev/day-picker'
+      fullPath: '/dev/day-picker'
+      preLoaderRoute: typeof DevDayPickerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dev/stop-method-step': {
+      id: '/dev/stop-method-step'
+      path: '/dev/stop-method-step'
+      fullPath: '/dev/stop-method-step'
+      preLoaderRoute: typeof DevStopMethodStepRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -89,6 +130,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SettingsRoute: SettingsRoute,
   StopRoute: StopRoute,
+  DevDayPickerRoute: DevDayPickerRoute,
+  DevStopMethodStepRoute: DevStopMethodStepRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
